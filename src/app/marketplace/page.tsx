@@ -5,12 +5,12 @@ import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { ProductCard } from "@/components/marketplace/ProductCard";
 import { FilterSidebar } from "@/components/marketplace/FilterSidebar";
-import { Search, PlusCircle, Sparkles, SlidersHorizontal, ArrowUpDown } from "lucide-react";
+import { Search, Plus, SlidersHorizontal, ArrowUpDown, Cpu } from "lucide-react";
 import Link from "next/link";
 
 function MarketplaceContent() {
   const searchParams = useSearchParams();
-  const { products } = useAuth();
+  const { products, refreshData } = useAuth();
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
@@ -42,7 +42,7 @@ function MarketplaceContent() {
     setMaxPrice(30000);
   };
 
-  // Filtered and Sorted items
+  // Filtered and Sorted items directly from live database state
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
       // Search term
@@ -50,7 +50,7 @@ function MarketplaceContent() {
         const q = searchQuery.toLowerCase();
         const matchesTitle = p.title.toLowerCase().includes(q);
         const matchesDesc = p.description.toLowerCase().includes(q);
-        const matchesUni = p.seller.university.toLowerCase().includes(q);
+        const matchesUni = p.seller?.university?.toLowerCase().includes(q);
         const matchesCat = p.category.toLowerCase().includes(q);
         if (!matchesTitle && !matchesDesc && !matchesUni && !matchesCat) return false;
       }
@@ -67,20 +67,20 @@ function MarketplaceContent() {
 
       // University
       if (selectedUniversity !== "all") {
-        if (!p.seller.university.toLowerCase().includes(selectedUniversity.toLowerCase())) {
+        if (!p.seller?.university?.toLowerCase().includes(selectedUniversity.toLowerCase())) {
           return false;
         }
       }
 
       // City
-      if (selectedCity !== "all") {
-        if (p.seller.city.toLowerCase() !== selectedCity.toLowerCase()) {
+      if (selectedCity !== "all" && selectedCity !== "All Cities") {
+        if (!p.location?.toLowerCase().includes(selectedCity.toLowerCase()) && p.seller?.city !== selectedCity) {
           return false;
         }
       }
 
-      // Verified Only
-      if (verifiedOnly && !p.seller.isVerifiedStudent) {
+      // Verified Student Only
+      if (verifiedOnly && !p.seller?.isVerifiedStudent) {
         return false;
       }
 
@@ -93,75 +93,81 @@ function MarketplaceContent() {
     }).sort((a, b) => {
       if (sortBy === "price_asc") return a.pricePkr - b.pricePkr;
       if (sortBy === "price_desc") return b.pricePkr - a.pricePkr;
-      if (sortBy === "rating") return b.seller.rating - a.seller.rating;
+      if (sortBy === "rating") return (b.seller?.rating || 5) - (a.seller?.rating || 5);
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  }, [
-    products,
-    searchQuery,
-    selectedCategory,
-    selectedCondition,
-    selectedUniversity,
-    selectedCity,
-    verifiedOnly,
-    maxPrice,
-    sortBy,
-  ]);
+  }, [products, searchQuery, selectedCategory, selectedCondition, selectedUniversity, selectedCity, verifiedOnly, maxPrice, sortBy]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Header Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-techlo-border/60">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-display font-black text-white tracking-tight">
-            Hardware Marketplace
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Browse {filteredProducts.length} verified hardware listings from university students across Pakistan.
-          </p>
-        </div>
-
-        {/* Top Controls */}
-        <div className="flex items-center gap-3">
-          {/* Mobile Filter Toggle */}
-          <button
-            onClick={() => setIsMobileFilterOpen(!isMobileFilterOpen)}
-            className="lg:hidden px-3.5 py-2 rounded-xl bg-techlo-surface border border-techlo-border text-xs font-semibold text-white flex items-center gap-1.5"
-          >
-            <SlidersHorizontal className="w-4 h-4 text-techlo-cyan" />
-            <span>Filters</span>
-          </button>
-
-          {/* Sort Dropdown */}
-          <div className="relative flex items-center bg-techlo-surface border border-techlo-border rounded-xl px-3 py-1.5 text-xs text-slate-300">
-            <ArrowUpDown className="w-3.5 h-3.5 text-techlo-cyan mr-2" />
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="bg-transparent text-white focus:outline-none cursor-pointer pr-2"
-            >
-              <option value="newest" className="bg-techlo-dark">Newest Listings First</option>
-              <option value="price_asc" className="bg-techlo-dark">Price: Low to High</option>
-              <option value="price_desc" className="bg-techlo-dark">Price: High to Low</option>
-              <option value="rating" className="bg-techlo-dark">Top Rated Sellers</option>
-            </select>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 font-mono">
+      {/* Header & Search Bar */}
+      <div className="space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <span className="text-[10px] uppercase tracking-widest text-neutral-500 block mb-1">
+              // CAMPUS DIRECTORY
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-bold text-black dark:text-white tracking-tight">
+              Hardware Marketplace
+            </h1>
+            <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5 font-sans">
+              Browse microcontrollers, sensors, development kits, and motors listed by engineering students across Pakistan.
+            </p>
           </div>
 
-          {/* Post Ad CTA */}
           <Link
             href="/sell"
-            className="hidden sm:flex items-center gap-1.5 px-4 py-2 rounded-xl bg-techlo-cyan hover:bg-techlo-sky text-techlo-dark text-xs font-bold shadow-glow-cyan transition-all"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black font-bold text-xs shadow-sm transition-all whitespace-nowrap"
           >
-            <PlusCircle className="w-4 h-4" />
-            <span>Sell Component</span>
+            <Plus className="w-4 h-4 stroke-[3]" />
+            <span>Post Hardware Item</span>
           </Link>
+        </div>
+
+        {/* Search & Sort Controls */}
+        <div className="flex flex-col sm:flex-row gap-3 pt-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+            <input
+              type="text"
+              placeholder="Search by component title, chip model (ESP32, STM32), or campus..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-[#0e0e0e] border border-neutral-200 dark:border-neutral-800 focus:border-black dark:focus:border-white rounded-xl text-xs text-black dark:text-white placeholder-neutral-400 focus:outline-none transition-all shadow-sm"
+            />
+          </div>
+
+          {/* Sort Dropdown */}
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1 sm:w-48">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="w-full px-3 py-2.5 bg-white dark:bg-[#0e0e0e] border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs text-black dark:text-white focus:outline-none cursor-pointer shadow-sm"
+              >
+                <option value="newest">Newest First</option>
+                <option value="price_asc">Price: Low to High</option>
+                <option value="price_desc">Price: High to Low</option>
+                <option value="rating">Top Rated Sellers</option>
+              </select>
+            </div>
+
+            {/* Mobile Filter Toggle */}
+            <button
+              onClick={() => setIsMobileFilterOpen(!isMobileFilterOpen)}
+              className="p-2.5 rounded-xl bg-white dark:bg-[#0e0e0e] border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white lg:hidden flex items-center gap-1.5 text-xs shadow-sm cursor-pointer"
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              <span>Filters</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Main Grid with Sidebar */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
-        {/* Sidebar Desktop */}
-        <div className={`lg:block ${isMobileFilterOpen ? "block" : "hidden"} lg:col-span-1`}>
+      {/* Main Content Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Desktop Sidebar (3 cols) */}
+        <div className="hidden lg:block lg:col-span-3 sticky top-24">
           <FilterSidebar
             selectedCategory={selectedCategory}
             setSelectedCategory={setSelectedCategory}
@@ -179,74 +185,75 @@ function MarketplaceContent() {
           />
         </div>
 
-        {/* Listings Grid (3 cols) */}
-        <div className="lg:col-span-3 space-y-6">
-          {/* Active Search / Filters Indicator */}
-          {(selectedCategory !== "all" ||
-            selectedCondition !== "all" ||
-            selectedUniversity !== "all" ||
-            selectedCity !== "all" ||
-            searchQuery.trim() !== "") && (
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="text-slate-400 font-medium">Active filters:</span>
-              {searchQuery.trim() && (
-                <span className="px-2.5 py-1 bg-techlo-surface border border-techlo-border rounded-lg text-white font-mono">
-                  &quot;{searchQuery}&quot;
-                </span>
-              )}
-              {selectedCategory !== "all" && (
-                <span className="px-2.5 py-1 bg-techlo-surface border border-techlo-border rounded-lg text-techlo-cyan font-semibold">
-                  {selectedCategory}
-                </span>
-              )}
-              {selectedCondition !== "all" && (
-                <span className="px-2.5 py-1 bg-techlo-surface border border-techlo-border rounded-lg text-techlo-sky font-semibold">
-                  {selectedCondition}
-                </span>
-              )}
-              {selectedUniversity !== "all" && (
-                <span className="px-2.5 py-1 bg-techlo-surface border border-techlo-border rounded-lg text-emerald-400 font-semibold">
-                  {selectedUniversity}
-                </span>
-              )}
+        {/* Mobile Filter Drawer */}
+        {isMobileFilterOpen && (
+          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm lg:hidden flex justify-end">
+            <div className="w-full max-w-xs bg-white dark:bg-[#0a0a0a] h-full overflow-y-auto p-4 space-y-4">
+              <div className="flex justify-between items-center pb-2 border-b border-neutral-200 dark:border-neutral-800">
+                <span className="font-bold text-black dark:text-white text-xs">Filter Options</span>
+                <button
+                  onClick={() => setIsMobileFilterOpen(false)}
+                  className="text-xs text-neutral-500 hover:text-black dark:hover:text-white font-bold"
+                >
+                  Close ✕
+                </button>
+              </div>
+              <FilterSidebar
+                selectedCategory={selectedCategory}
+                setSelectedCategory={setSelectedCategory}
+                selectedCondition={selectedCondition}
+                setSelectedCondition={setSelectedCondition}
+                selectedUniversity={selectedUniversity}
+                setSelectedUniversity={setSelectedUniversity}
+                selectedCity={selectedCity}
+                setSelectedCity={setSelectedCity}
+                verifiedOnly={verifiedOnly}
+                setVerifiedOnly={setVerifiedOnly}
+                maxPrice={maxPrice}
+                setMaxPrice={setMaxPrice}
+                onReset={handleReset}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Products Grid (9 cols) */}
+        <div className="lg:col-span-9 space-y-4">
+          <div className="flex items-center justify-between text-xs text-neutral-500 pb-2">
+            <span>
+              Showing <strong>{filteredProducts.length}</strong> items in database
+            </span>
+            {(selectedCategory !== "all" || selectedUniversity !== "all" || searchQuery) && (
               <button
                 onClick={handleReset}
-                className="text-techlo-cyan hover:underline ml-1 font-bold cursor-pointer"
+                className="text-black dark:text-white hover:underline cursor-pointer"
               >
-                Clear all
+                Clear active filters
               </button>
-            </div>
-          )}
+            )}
+          </div>
 
-          {filteredProducts.length === 0 ? (
-            <div className="text-center py-16 px-4 bg-techlo-dark border border-techlo-border rounded-3xl space-y-4">
-              <div className="w-16 h-16 rounded-3xl bg-techlo-surface border border-techlo-border flex items-center justify-center text-slate-400 mx-auto">
-                <Search className="w-8 h-8" />
-              </div>
-              <h3 className="text-xl font-bold text-white">No hardware components found</h3>
-              <p className="text-xs sm:text-sm text-slate-400 max-w-md mx-auto">
-                Try widening your price range, clearing filters, or searching for alternative part numbers.
-              </p>
-              <div className="pt-2 flex justify-center gap-3">
-                <button
-                  onClick={handleReset}
-                  className="px-4 py-2 bg-techlo-surface hover:bg-techlo-border border border-techlo-border rounded-xl text-xs text-white font-semibold cursor-pointer"
-                >
-                  Reset Filters
-                </button>
-                <Link
-                  href="/sell"
-                  className="px-4 py-2 bg-techlo-cyan text-techlo-dark rounded-xl text-xs font-bold shadow-glow-cyan"
-                >
-                  Post a Request / Sell Hardware
-                </Link>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+          {filteredProducts.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
+            </div>
+          ) : (
+            <div className="p-16 text-center bg-white dark:bg-[#0a0a0a] border border-neutral-200 dark:border-neutral-800 rounded-2xl space-y-3 shadow-sm">
+              <Cpu className="w-12 h-12 text-neutral-400 mx-auto" />
+              <h3 className="text-base font-bold text-black dark:text-white">No hardware listings found</h3>
+              <p className="text-xs text-neutral-500 max-w-sm mx-auto font-sans">
+                Try adjusting your search query, price slider, or university campus filter.
+              </p>
+              <div className="pt-2">
+                <button
+                  onClick={handleReset}
+                  className="px-4 py-2 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-black text-black dark:text-white text-xs font-bold rounded-xl cursor-pointer"
+                >
+                  Reset All Filters
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -257,7 +264,7 @@ function MarketplaceContent() {
 
 export default function MarketplacePage() {
   return (
-    <Suspense fallback={<div className="p-12 text-center text-slate-400 font-mono">Loading TECHLO Marketplace...</div>}>
+    <Suspense fallback={<div className="max-w-7xl mx-auto p-8 font-mono text-xs text-neutral-500">Loading live marketplace...</div>}>
       <MarketplaceContent />
     </Suspense>
   );
