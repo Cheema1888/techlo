@@ -11,7 +11,6 @@ import {
   ArrowRight,
   Clock,
   Check,
-  FileText,
 } from "lucide-react";
 
 interface QuoteEstimatorProps {
@@ -80,20 +79,20 @@ export const QuoteEstimator: React.FC<QuoteEstimatorProps> = ({ onApplyEstimate 
   const currentEstimatedPrice = getEstimatedCost();
 
   return (
-    <div className="bg-[#0a0a0a] border border-neutral-800 rounded-2xl p-6 sm:p-8 space-y-6">
+    <div className="bg-white dark:bg-[#0a0a0a] border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 sm:p-8 space-y-6 shadow-sm">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-neutral-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-neutral-200 dark:border-neutral-800">
         <div>
-          <span className="text-[11px] font-mono uppercase tracking-widest text-neutral-400 block mb-1">
+          <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 block mb-1">
             // ESTIMATION ENGINE
           </span>
-          <h3 className="text-xl font-bold text-white tracking-tight">
+          <h3 className="text-xl font-bold text-black dark:text-white tracking-tight">
             Instant Service Quote Calculator
           </h3>
         </div>
 
         {/* Tab Selectors */}
-        <div className="flex bg-[#121212] p-1 rounded-xl border border-neutral-800 overflow-x-auto">
+        <div className="flex bg-neutral-100 dark:bg-[#121212] p-1 rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-x-auto">
           {[
             { id: "pcb_design", label: "PCB Design", icon: Cpu },
             { id: "pcb_fab", label: "PCB Fabrication", icon: Layers },
@@ -108,8 +107,8 @@ export const QuoteEstimator: React.FC<QuoteEstimatorProps> = ({ onApplyEstimate 
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                   isSelected
-                    ? "bg-white text-black font-bold shadow-mono-sm"
-                    : "text-neutral-400 hover:text-white"
+                    ? "bg-black text-white dark:bg-white dark:text-black font-bold shadow-sm"
+                    : "text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white"
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -123,12 +122,12 @@ export const QuoteEstimator: React.FC<QuoteEstimatorProps> = ({ onApplyEstimate 
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Controls Column (7 cols) */}
-        <div className="lg:col-span-7 space-y-6">
+        <div className="lg:col-span-7 space-y-5 font-mono">
           {/* PCB Design Tab */}
           {activeTab === "pcb_design" && (
             <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-xs font-mono text-neutral-300 uppercase">Layer Count</label>
+              <div className="space-y-1.5">
+                <label className="text-xs text-neutral-600 dark:text-neutral-300 uppercase">Layer Count</label>
                 <div className="grid grid-cols-3 gap-2">
                   {[2, 4, 6].map((l) => (
                     <button
@@ -137,8 +136,8 @@ export const QuoteEstimator: React.FC<QuoteEstimatorProps> = ({ onApplyEstimate 
                       onClick={() => setPcbLayers(l)}
                       className={`py-2.5 px-3 rounded-xl border text-xs font-mono font-bold cursor-pointer transition-all ${
                         pcbLayers === l
-                          ? "bg-white text-black border-white"
-                          : "bg-[#121212] border-neutral-800 text-neutral-300 hover:border-neutral-700"
+                          ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-sm"
+                          : "bg-neutral-50 dark:bg-[#121212] border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 hover:border-neutral-400 dark:hover:border-neutral-700"
                       }`}
                     >
                       {l} Layers
@@ -147,8 +146,8 @@ export const QuoteEstimator: React.FC<QuoteEstimatorProps> = ({ onApplyEstimate 
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-xs font-mono text-neutral-300 uppercase">Design Scope</label>
+              <div className="space-y-1.5">
+                <label className="text-xs text-neutral-600 dark:text-neutral-300 uppercase">Design Scope</label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
                     { id: "simple", name: "Standard", desc: "Sensors / Relays" },
@@ -161,12 +160,12 @@ export const QuoteEstimator: React.FC<QuoteEstimatorProps> = ({ onApplyEstimate 
                       onClick={() => setComplexity(c.id as any)}
                       className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
                         complexity === c.id
-                          ? "bg-white text-black border-white"
-                          : "bg-[#121212] border-neutral-800 text-neutral-300 hover:border-neutral-700"
+                          ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-sm"
+                          : "bg-neutral-50 dark:bg-[#121212] border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 hover:border-neutral-400 dark:hover:border-neutral-700"
                       }`}
                     >
                       <div className="text-xs font-bold">{c.name}</div>
-                      <div className={`text-[10px] mt-0.5 ${complexity === c.id ? "text-neutral-700" : "text-neutral-500"}`}>
+                      <div className={`text-[10px] mt-0.5 ${complexity === c.id ? "text-neutral-300 dark:text-neutral-700" : "text-neutral-500"}`}>
                         {c.desc}
                       </div>
                     </button>
@@ -179,12 +178,12 @@ export const QuoteEstimator: React.FC<QuoteEstimatorProps> = ({ onApplyEstimate 
           {/* PCB Fab Tab */}
           {activeTab === "pcb_fab" && (
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-xs font-mono text-neutral-300 uppercase">Batch Quantity</label>
+              <div className="space-y-1.5">
+                <label className="text-xs text-neutral-600 dark:text-neutral-300 uppercase">Batch Quantity</label>
                 <select
                   value={fabQty}
                   onChange={(e) => setFabQty(Number(e.target.value))}
-                  className="w-full p-2.5 bg-[#121212] border border-neutral-800 rounded-xl text-white text-xs font-mono"
+                  className="w-full p-2.5 bg-neutral-50 dark:bg-[#121212] border border-neutral-200 dark:border-neutral-800 rounded-xl text-black dark:text-white text-xs font-mono"
                 >
                   <option value={5}>5 Pieces (Standard Prototype)</option>
                   <option value={10}>10 Pieces</option>
@@ -192,12 +191,12 @@ export const QuoteEstimator: React.FC<QuoteEstimatorProps> = ({ onApplyEstimate 
                 </select>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-xs font-mono text-neutral-300 uppercase">Solder Mask Finish</label>
+              <div className="space-y-1.5">
+                <label className="text-xs text-neutral-600 dark:text-neutral-300 uppercase">Solder Mask Finish</label>
                 <select
                   value={color}
                   onChange={(e) => setColor(e.target.value)}
-                  className="w-full p-2.5 bg-[#121212] border border-neutral-800 rounded-xl text-white text-xs font-mono"
+                  className="w-full p-2.5 bg-neutral-50 dark:bg-[#121212] border border-neutral-200 dark:border-neutral-800 rounded-xl text-black dark:text-white text-xs font-mono"
                 >
                   <option value="Matte Black">Matte Black (Engineering)</option>
                   <option value="White">Gloss White</option>
@@ -210,8 +209,8 @@ export const QuoteEstimator: React.FC<QuoteEstimatorProps> = ({ onApplyEstimate 
 
           {/* CAD Model Tab */}
           {activeTab === "cad_model" && (
-            <div className="space-y-2">
-              <label className="text-xs font-mono text-neutral-300 uppercase">CAD Project Type</label>
+            <div className="space-y-1.5">
+              <label className="text-xs text-neutral-600 dark:text-neutral-300 uppercase">CAD Project Type</label>
               <div className="grid grid-cols-3 gap-2">
                 {[
                   { id: "enclosure", name: "Custom Enclosure", desc: "Snap-fit / Screwed Box" },
@@ -224,12 +223,12 @@ export const QuoteEstimator: React.FC<QuoteEstimatorProps> = ({ onApplyEstimate 
                     onClick={() => setCadScope(s.id as any)}
                     className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
                       cadScope === s.id
-                        ? "bg-white text-black border-white"
-                        : "bg-[#121212] border-neutral-800 text-neutral-300 hover:border-neutral-700"
+                        ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-sm"
+                        : "bg-neutral-50 dark:bg-[#121212] border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 hover:border-neutral-400 dark:hover:border-neutral-700"
                     }`}
                   >
                     <div className="text-xs font-bold">{s.name}</div>
-                    <div className={`text-[10px] mt-0.5 ${cadScope === s.id ? "text-neutral-700" : "text-neutral-500"}`}>
+                    <div className={`text-[10px] mt-0.5 ${cadScope === s.id ? "text-neutral-300 dark:text-neutral-700" : "text-neutral-500"}`}>
                       {s.desc}
                     </div>
                   </button>
@@ -241,8 +240,8 @@ export const QuoteEstimator: React.FC<QuoteEstimatorProps> = ({ onApplyEstimate 
           {/* 3D Print Tab */}
           {activeTab === "3d_print" && (
             <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-xs font-mono text-neutral-300 uppercase">Material</label>
+              <div className="space-y-1.5">
+                <label className="text-xs text-neutral-600 dark:text-neutral-300 uppercase">Material</label>
                 <div className="grid grid-cols-4 gap-2">
                   {["PLA", "PETG", "ABS", "Resin"].map((m) => (
                     <button
@@ -251,8 +250,8 @@ export const QuoteEstimator: React.FC<QuoteEstimatorProps> = ({ onApplyEstimate 
                       onClick={() => setMaterial(m as any)}
                       className={`py-2 px-3 rounded-xl border text-xs font-mono font-bold cursor-pointer transition-all ${
                         material === m
-                          ? "bg-white text-black border-white"
-                          : "bg-[#121212] border-neutral-800 text-neutral-300 hover:border-neutral-700"
+                          ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-sm"
+                          : "bg-neutral-50 dark:bg-[#121212] border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 hover:border-neutral-400 dark:hover:border-neutral-700"
                       }`}
                     >
                       {m}
@@ -263,8 +262,8 @@ export const QuoteEstimator: React.FC<QuoteEstimatorProps> = ({ onApplyEstimate 
 
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs font-mono">
-                  <span className="text-neutral-400">Estimated Weight</span>
-                  <span className="text-white font-bold">{weightGrams}g</span>
+                  <span className="text-neutral-600 dark:text-neutral-400">Estimated Weight</span>
+                  <span className="text-black dark:text-white font-bold">{weightGrams}g</span>
                 </div>
                 <input
                   type="range"
@@ -273,7 +272,7 @@ export const QuoteEstimator: React.FC<QuoteEstimatorProps> = ({ onApplyEstimate 
                   step="5"
                   value={weightGrams}
                   onChange={(e) => setWeightGrams(Number(e.target.value))}
-                  className="w-full accent-white cursor-pointer"
+                  className="w-full accent-black dark:accent-white cursor-pointer"
                 />
               </div>
             </div>
@@ -281,30 +280,30 @@ export const QuoteEstimator: React.FC<QuoteEstimatorProps> = ({ onApplyEstimate 
         </div>
 
         {/* Price Output Card (5 cols) */}
-        <div className="lg:col-span-5 bg-[#121212] border border-neutral-800 rounded-2xl p-6 space-y-5">
+        <div className="lg:col-span-5 bg-neutral-50 dark:bg-[#121212] border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 space-y-5 shadow-sm">
           <div className="space-y-1">
             <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 block">
               Estimated Total (PKR)
             </span>
-            <div className="font-mono text-3xl font-black text-white tracking-tight">
+            <div className="font-mono text-3xl font-black text-black dark:text-white tracking-tight">
               {formatPKR(currentEstimatedPrice)}
             </div>
           </div>
 
-          <div className="space-y-2 text-xs text-neutral-400 border-t border-neutral-800 pt-4 font-mono">
+          <div className="space-y-2 text-xs text-neutral-600 dark:text-neutral-400 border-t border-neutral-200 dark:border-neutral-800 pt-4 font-mono">
             <div className="flex items-center gap-2">
-              <Clock className="w-3.5 h-3.5 text-neutral-400" />
+              <Clock className="w-3.5 h-3.5" />
               <span>Turnaround: <strong>2 - 3 Days</strong></span>
             </div>
             <div className="flex items-center gap-2">
-              <Check className="w-3.5 h-3.5 text-white" />
+              <Check className="w-3.5 h-3.5 text-black dark:text-white" />
               <span>Includes Design Review & DRC Check</span>
             </div>
           </div>
 
           <Link
             href="/services/request"
-            className="w-full py-3 bg-white hover:bg-neutral-200 text-black font-bold text-xs rounded-xl shadow-mono-sm text-center flex items-center justify-center gap-2 transition-all cursor-pointer font-mono"
+            className="w-full py-3 bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black font-bold text-xs rounded-xl shadow-sm text-center flex items-center justify-center gap-2 transition-all cursor-pointer font-mono"
           >
             <span>Request Official Quote</span>
             <ArrowRight className="w-3.5 h-3.5" />

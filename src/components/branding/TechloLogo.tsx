@@ -1,10 +1,12 @@
+"use client";
+
 import React from "react";
+import { useTheme } from "@/lib/themeContext";
 
 interface TechloLogoProps {
   className?: string;
   size?: "sm" | "md" | "lg" | "xl";
   showTagline?: boolean;
-  variant?: "monochrome" | "white" | "dark";
   iconOnly?: boolean;
 }
 
@@ -12,9 +14,11 @@ export const TechloLogo: React.FC<TechloLogoProps> = ({
   className = "",
   size = "md",
   showTagline = true,
-  variant = "white",
   iconOnly = false,
 }) => {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
   const heightMap = {
     sm: iconOnly ? 26 : 26,
     md: iconOnly ? 34 : 34,
@@ -24,7 +28,7 @@ export const TechloLogo: React.FC<TechloLogoProps> = ({
 
   const currentHeight = heightMap[size];
 
-  // Robot Icon Component in Clean Monochrome
+  // Robot Icon Component
   const RobotIcon = ({ s = 34 }: { s?: number }) => (
     <svg
       width={s}
@@ -35,10 +39,10 @@ export const TechloLogo: React.FC<TechloLogoProps> = ({
       className="inline-block flex-shrink-0 align-middle"
     >
       {/* Outer Ring */}
-      <circle cx="50" cy="50" r="46" fill="#FFFFFF" />
+      <circle cx="50" cy="50" r="46" fill={isDark ? "#FFFFFF" : "#0A0A0A"} />
 
       {/* Inner Screen Bezel */}
-      <circle cx="50" cy="50" r="37" fill="#0A0A0A" />
+      <circle cx="50" cy="50" r="37" fill={isDark ? "#0A0A0A" : "#FFFFFF"} />
 
       {/* Robot Face Screen Container */}
       <rect
@@ -47,19 +51,19 @@ export const TechloLogo: React.FC<TechloLogoProps> = ({
         width="56"
         height="48"
         rx="12"
-        fill="#141414"
-        stroke="#262626"
+        fill={isDark ? "#141414" : "#F5F5F5"}
+        stroke={isDark ? "#262626" : "#E5E5E5"}
         strokeWidth="2"
       />
 
       {/* Robot Eyes (Pixel / Square Style) */}
-      <rect x="32" y="40" width="11" height="11" rx="2" fill="#FFFFFF" />
-      <rect x="57" y="40" width="11" height="11" rx="2" fill="#FFFFFF" />
+      <rect x="32" y="40" width="11" height="11" rx="2" fill={isDark ? "#FFFFFF" : "#0A0A0A"} />
+      <rect x="57" y="40" width="11" height="11" rx="2" fill={isDark ? "#FFFFFF" : "#0A0A0A"} />
 
       {/* Cute Smile */}
       <path
         d="M44 60 C47 63, 53 63, 56 60"
-        stroke="#FFFFFF"
+        stroke={isDark ? "#FFFFFF" : "#0A0A0A"}
         strokeWidth="3.5"
         strokeLinecap="round"
       />
@@ -70,14 +74,11 @@ export const TechloLogo: React.FC<TechloLogoProps> = ({
     return <RobotIcon s={currentHeight} />;
   }
 
-  const textColor = variant === "dark" ? "text-black" : "text-white";
-  const taglineColor = variant === "dark" ? "text-neutral-600" : "text-neutral-400";
-
   return (
     <div className={`inline-flex flex-col items-start select-none ${className}`}>
       <div className="flex items-center gap-1">
         <span
-          className={`font-mono font-black tracking-tighter leading-none ${textColor}`}
+          className="font-mono font-black tracking-tighter leading-none text-black dark:text-white transition-colors"
           style={{
             fontSize:
               size === "sm"
@@ -117,7 +118,7 @@ export const TechloLogo: React.FC<TechloLogoProps> = ({
       </div>
       {showTagline && (
         <span
-          className={`font-mono tracking-widest leading-none ${taglineColor}`}
+          className="font-mono tracking-widest leading-none text-neutral-500 dark:text-neutral-400 transition-colors"
           style={{
             fontSize:
               size === "sm"
@@ -132,7 +133,7 @@ export const TechloLogo: React.FC<TechloLogoProps> = ({
             alignSelf: "flex-end",
           }}
         >
-          a product of <span className="font-bold text-white">arix</span>
+          a product of <span className="font-bold text-black dark:text-white">arix</span>
         </span>
       )}
     </div>

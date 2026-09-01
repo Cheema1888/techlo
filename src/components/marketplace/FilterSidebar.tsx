@@ -3,7 +3,6 @@
 import React from "react";
 import { ComponentCategory, HardwareCondition } from "@/lib/types";
 import { PAKISTANI_UNIVERSITIES } from "@/lib/mockData";
-import { getCategoryLabel } from "@/lib/utils";
 import { Filter, RotateCcw, ShieldCheck } from "lucide-react";
 
 interface FilterSidebarProps {
@@ -23,7 +22,7 @@ interface FilterSidebarProps {
 }
 
 const CATEGORIES: { id: ComponentCategory; label: string }[] = [
-  { id: "microcontrollers", label: "Microcontrollers (ESP32/STM32)" },
+  { id: "microcontrollers", label: "Microcontrollers (ESP32 / STM32)" },
   { id: "sensors", label: "Sensors & IMUs" },
   { id: "motors_actuators", label: "Motors, Servos & Steppers" },
   { id: "power_bms", label: "Power, LiPo & BMS" },
@@ -36,9 +35,9 @@ const CATEGORIES: { id: ComponentCategory; label: string }[] = [
 
 const CONDITIONS: { id: HardwareCondition; label: string }[] = [
   { id: "brand_new", label: "Brand New (Unopened)" },
-  { id: "fyp_tested", label: "FYP Tested (100% Working)" },
+  { id: "fyp_tested", label: "Tested & Working" },
   { id: "gently_used", label: "Gently Used" },
-  { id: "desoldered_working", label: "Desoldered / Functional" },
+  { id: "desoldered_working", label: "Desoldered / Tested" },
   { id: "for_parts", label: "For Parts / Salvage" },
 ];
 
@@ -60,16 +59,16 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
   onReset,
 }) => {
   return (
-    <aside className="w-full bg-techlo-dark border border-techlo-border rounded-2xl p-5 space-y-6">
+    <aside className="w-full bg-white dark:bg-[#0a0a0a] border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5 space-y-6 font-mono text-xs shadow-sm">
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-techlo-border/60">
-        <div className="flex items-center gap-2 text-white font-bold text-sm">
-          <Filter className="w-4 h-4 text-techlo-cyan" />
+      <div className="flex items-center justify-between pb-3 border-b border-neutral-200 dark:border-neutral-800">
+        <div className="flex items-center gap-2 text-black dark:text-white font-bold">
+          <Filter className="w-3.5 h-3.5" />
           <span>Filters</span>
         </div>
         <button
           onClick={onReset}
-          className="text-xs text-slate-400 hover:text-techlo-sky flex items-center gap-1 cursor-pointer transition-colors"
+          className="text-neutral-500 hover:text-black dark:hover:text-white flex items-center gap-1 cursor-pointer transition-colors"
         >
           <RotateCcw className="w-3 h-3" />
           <span>Reset</span>
@@ -77,33 +76,33 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
       </div>
 
       {/* Verified Students Only Toggle */}
-      <div className="p-3 bg-techlo-surface/60 border border-techlo-border rounded-xl">
+      <div className="p-3 bg-neutral-50 dark:bg-[#111111] border border-neutral-200 dark:border-neutral-800 rounded-xl">
         <label className="flex items-center justify-between cursor-pointer">
-          <span className="text-xs font-semibold text-white flex items-center gap-1.5">
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            Verified Students Only
+          <span className="font-semibold text-black dark:text-white flex items-center gap-1.5">
+            <ShieldCheck className="w-4 h-4" />
+            Verified Students
           </span>
           <input
             type="checkbox"
             checked={verifiedOnly}
             onChange={(e) => setVerifiedOnly(e.target.checked)}
-            className="w-4 h-4 rounded text-techlo-cyan focus:ring-techlo-cyan bg-techlo-dark border-techlo-border cursor-pointer accent-techlo-cyan"
+            className="w-4 h-4 rounded text-black dark:text-white focus:ring-black accent-black dark:accent-white cursor-pointer"
           />
         </label>
       </div>
 
       {/* Categories */}
-      <div className="space-y-2">
-        <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-          Component Category
+      <div className="space-y-1.5">
+        <h4 className="font-bold text-neutral-500 uppercase tracking-wider text-[10px]">
+          Category
         </h4>
         <div className="space-y-1">
           <button
             onClick={() => setSelectedCategory("all")}
-            className={`w-full text-left px-3 py-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
+            className={`w-full text-left px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
               selectedCategory === "all"
-                ? "bg-techlo-cyan text-techlo-dark font-bold shadow-sm"
-                : "text-slate-300 hover:bg-techlo-surface"
+                ? "bg-black text-white dark:bg-white dark:text-black font-bold"
+                : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-[#121212]"
             }`}
           >
             All Components
@@ -112,10 +111,10 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
             <button
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id)}
-              className={`w-full text-left px-3 py-1.5 rounded-lg text-xs transition-colors cursor-pointer truncate ${
+              className={`w-full text-left px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer truncate ${
                 selectedCategory === cat.id
-                  ? "bg-techlo-cyan text-techlo-dark font-bold shadow-sm"
-                  : "text-slate-300 hover:bg-techlo-surface"
+                  ? "bg-black text-white dark:bg-white dark:text-black font-bold"
+                  : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-[#121212]"
               }`}
             >
               {cat.label}
@@ -125,17 +124,17 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
       </div>
 
       {/* Condition Filter */}
-      <div className="space-y-2 pt-3 border-t border-techlo-border/60">
-        <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-          Hardware Condition
+      <div className="space-y-1.5 pt-3 border-t border-neutral-200 dark:border-neutral-800">
+        <h4 className="font-bold text-neutral-500 uppercase tracking-wider text-[10px]">
+          Condition
         </h4>
         <div className="space-y-1">
           <button
             onClick={() => setSelectedCondition("all")}
-            className={`w-full text-left px-3 py-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
+            className={`w-full text-left px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
               selectedCondition === "all"
-                ? "bg-techlo-surface text-techlo-cyan font-bold border border-techlo-cyan/40"
-                : "text-slate-300 hover:bg-techlo-surface"
+                ? "bg-neutral-200 dark:bg-neutral-900 text-black dark:text-white font-bold border border-neutral-300 dark:border-neutral-700"
+                : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-[#121212]"
             }`}
           >
             Any Condition
@@ -144,10 +143,10 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
             <button
               key={cond.id}
               onClick={() => setSelectedCondition(cond.id)}
-              className={`w-full text-left px-3 py-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
+              className={`w-full text-left px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
                 selectedCondition === cond.id
-                  ? "bg-techlo-surface text-techlo-cyan font-bold border border-techlo-cyan/40"
-                  : "text-slate-300 hover:bg-techlo-surface"
+                  ? "bg-neutral-200 dark:bg-neutral-900 text-black dark:text-white font-bold border border-neutral-300 dark:border-neutral-700"
+                  : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-[#121212]"
               }`}
             >
               {cond.label}
@@ -157,47 +156,29 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
       </div>
 
       {/* University Campus Filter */}
-      <div className="space-y-2 pt-3 border-t border-techlo-border/60">
-        <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-          University / Campus
+      <div className="space-y-1.5 pt-3 border-t border-neutral-200 dark:border-neutral-800">
+        <h4 className="font-bold text-neutral-500 uppercase tracking-wider text-[10px]">
+          Campus / University
         </h4>
         <select
           value={selectedUniversity}
           onChange={(e) => setSelectedUniversity(e.target.value)}
-          className="w-full px-3 py-2 bg-techlo-surface border border-techlo-border rounded-xl text-xs text-white focus:border-techlo-cyan focus:outline-none cursor-pointer"
+          className="w-full px-2.5 py-2 bg-neutral-50 dark:bg-[#121212] border border-neutral-200 dark:border-neutral-800 rounded-lg text-black dark:text-white focus:outline-none cursor-pointer"
         >
-          <option value="all" className="bg-techlo-dark">All Pakistani Universities</option>
+          <option value="all" className="bg-white dark:bg-black">All Universities</option>
           {PAKISTANI_UNIVERSITIES.map((uni) => (
-            <option key={uni.id} value={uni.shortName} className="bg-techlo-dark">
+            <option key={uni.id} value={uni.shortName} className="bg-white dark:bg-black">
               {uni.shortName} - {uni.name}
             </option>
           ))}
         </select>
       </div>
 
-      {/* City Filter */}
-      <div className="space-y-2 pt-3 border-t border-techlo-border/60">
-        <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-          City Location
-        </h4>
-        <select
-          value={selectedCity}
-          onChange={(e) => setSelectedCity(e.target.value)}
-          className="w-full px-3 py-2 bg-techlo-surface border border-techlo-border rounded-xl text-xs text-white focus:border-techlo-cyan focus:outline-none cursor-pointer"
-        >
-          {CITIES.map((c) => (
-            <option key={c} value={c === "All Cities" ? "all" : c} className="bg-techlo-dark">
-              {c}
-            </option>
-          ))}
-        </select>
-      </div>
-
       {/* Max Price Slider */}
-      <div className="space-y-2 pt-3 border-t border-techlo-border/60">
-        <div className="flex items-center justify-between text-xs">
-          <span className="font-bold text-slate-300 uppercase">Max Budget</span>
-          <span className="font-mono font-bold text-techlo-sky">Rs. {maxPrice.toLocaleString()}</span>
+      <div className="space-y-1.5 pt-3 border-t border-neutral-200 dark:border-neutral-800">
+        <div className="flex items-center justify-between">
+          <span className="font-bold text-neutral-500 uppercase text-[10px]">Max Price</span>
+          <span className="font-bold text-black dark:text-white">Rs. {maxPrice.toLocaleString()}</span>
         </div>
         <input
           type="range"
@@ -206,12 +187,8 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
           step="500"
           value={maxPrice}
           onChange={(e) => setMaxPrice(Number(e.target.value))}
-          className="w-full accent-techlo-cyan cursor-pointer"
+          className="w-full accent-black dark:accent-white cursor-pointer"
         />
-        <div className="flex justify-between text-[10px] text-slate-400 font-mono">
-          <span>Rs. 500</span>
-          <span>Rs. 30,000+</span>
-        </div>
       </div>
     </aside>
   );
