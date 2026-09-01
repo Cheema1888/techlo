@@ -6,19 +6,17 @@ import { Footer } from "@/components/layout/Footer";
 import { AuthModal } from "@/components/auth/AuthModal";
 
 export const metadata: Metadata = {
-  title: "TECHLO | Pakistan's Student Hardware Exchange & Prototyping Platform",
+  title: "TECHLO | Pakistan's Hardware Prototyping & Component Exchange",
   description:
-    "Buy and sell hardware components, microcontrollers, sensors, and dev boards across Pakistani university campuses (NUST, FAST, UET, GIKI, NED). Request custom PCB design, batch fabrication, and 3D CAD printing.",
+    "On-demand PCB design, fabrication batching, 3D CAD modeling & printing, and student hardware marketplace across Pakistani universities (NUST, FAST, UET, GIKI, NED). A product of arix.",
   keywords: [
     "TECHLO",
     "arix",
-    "Hardware Marketplace Pakistan",
-    "Used ESP32 Arduino Raspberry Pi Pakistan",
-    "Student FYP components",
     "PCB Design Pakistan",
     "PCB Fabrication",
     "3D CAD Modeling",
     "3D Printing Islamabad Lahore Karachi",
+    "Hardware Marketplace Pakistan",
     "NUST",
     "FAST",
     "GIKI",
@@ -33,7 +31,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className="min-h-screen bg-techlo-deep text-slate-100 flex flex-col antialiased bg-circuit-grid">
+      <body className="min-h-screen bg-[#050505] text-neutral-100 flex flex-col antialiased bg-dot-grid">
         <AuthProvider>
           <Navbar />
           <main className="flex-1">{children}</main>
