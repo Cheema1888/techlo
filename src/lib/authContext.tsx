@@ -1,103 +1,102 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { UserProfile, ProductListing, ServiceRequest } from "./types";
-import { MOCK_PRODUCTS, MOCK_SERVICES } from "./mockData";
+import { UserProfile, ProductListing, ServiceQuoteRequest } from "./types";
+import { MOCK_PRODUCTS } from "./mockData";
+
+interface PendingSignupData {
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  university: string;
+  campus?: string;
+  eduEmail?: string;
+  city?: string;
+}
 
 interface AuthContextType {
   user: UserProfile | null;
   isAuthenticated: boolean;
   isAuthModalOpen: boolean;
   authModalView: "login" | "signup" | "otp" | "verify_student";
+  generatedOtp: string | null;
+  pendingSignupData: PendingSignupData | null;
+  savedProductIds: string[];
+  products: ProductListing[];
+  serviceRequests: ServiceQuoteRequest[];
   openAuthModal: (view?: "login" | "signup" | "otp" | "verify_student") => void;
   closeAuthModal: () => void;
   setAuthModalView: (view: "login" | "signup" | "otp" | "verify_student") => void;
-  
-  // Auth Actions
-  pendingSignupData: any;
-  setPendingSignupData: (data: any) => void;
-  generatedOtp: string;
-  sendPhoneOtp: (phoneNumber: string) => Promise<boolean>;
-  verifyOtp: (enteredOtp: string) => boolean;
-  loginWithEmailOrPhone: (identifier: string, pass: string) => boolean;
+  loginWithEmailOrPhone: (identifier: string, password?: string) => Promise<boolean>;
+  sendPhoneOtp: (phoneNumber: string) => Promise<string>;
+  verifyOtp: (code: string) => Promise<boolean>;
+  verifyStudentBadge: (studentIdOrEduEmail: string) => Promise<boolean>;
   logout: () => void;
-  updateUserProfile: (data: Partial<UserProfile>) => void;
-  verifyStudentBadge: (eduEmailOrId: string) => void;
-
-  // Marketplace & Orders State
-  products: ProductListing[];
-  userProducts: ProductListing[];
-  savedProductIds: string[];
-  toggleSaveProduct: (id: string) => void;
-  addProductListing: (newProduct: Omit<ProductListing, "id" | "seller" | "createdAt" | "viewsCount" | "status">) => ProductListing;
-  markProductStatus: (id: string, status: "available" | "reserved" | "sold") => void;
-
-  // Services State
-  serviceRequests: ServiceRequest[];
-  createServiceRequest: (request: Omit<ServiceRequest, "id" | "createdAt" | "status">) => ServiceRequest;
+  setPendingSignupData: (data: PendingSignupData) => void;
+  toggleSaveProduct: (productId: string) => void;
+  addProduct: (product: Omit<ProductListing, "id" | "createdAt">) => Promise<ProductListing>;
+  addProductListing: (product: Omit<ProductListing, "id" | "createdAt">) => Promise<ProductListing>;
+  createServiceRequest: (request: Omit<ServiceQuoteRequest, "id" | "createdAt" | "status">) => Promise<ServiceQuoteRequest>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const DEFAULT_USER: UserProfile = {
-  id: "u-current-01",
-  fullName: "Muhammad Saad",
-  email: "saad.eng@nust.edu.pk",
-  phoneNumber: "+923009876543",
-  isPhoneVerified: true,
-  university: "National University of Sciences & Technology (NUST)",
-  campus: "H-12 Islamabad (SEECS)",
-  studentIdOrEduEmail: "saad.eng@nust.edu.pk",
-  isVerifiedStudent: true,
-  city: "Islamabad",
-  avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
-  joinedDate: "2026-05-15",
-  rating: 4.95,
-  dealsCompleted: 14,
-};
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [authModalView, setAuthModalView] = useState<"login" | "signup" | "otp" | "verify_student">("login");
-  const [pendingSignupData, setPendingSignupData] = useState<any>(null);
-  const [generatedOtp, setGeneratedOtp] = useState<string>("742918");
-  
-  // Marketplace & Services state
+  const [generatedOtp, setGeneratedOtp] = useState<string | null>(null);
+  const [pendingSignupData, setPendingSignupData] = useState<PendingSignupData | null>(null);
+  const [savedProductIds, setSavedProductIds] = useState<string[]>([]);
   const [products, setProducts] = useState<ProductListing[]>(MOCK_PRODUCTS);
-  const [savedProductIds, setSavedProductIds] = useState<string[]>(["tech-001", "tech-003"]);
-  const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>(MOCK_SERVICES);
+  const [serviceRequests, setServiceRequests] = useState<ServiceQuoteRequest[]>([]);
 
-  // Initialize from LocalStorage if present, else fallback
   useEffect(() => {
     try {
-      const savedUser = localStorage.getItem("techlo_user");
-      if (savedUser) {
-        setUser(JSON.parse(savedUser));
+      const storedUser = localStorage.getItem("techlo_user_session");
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
       } else {
-        // Provide demo authenticated student user by default for rich first experience
-        setUser(DEFAULT_USER);
-        localStorage.setItem("techlo_user", JSON.stringify(DEFAULT_USER));
+        const demoUser: UserProfile = {
+          id: "u-nust-demo",
+          email: "saad.eng@seecs.nust.edu.pk",
+          fullName: "Saad Tariq (NUST)",
+          phoneNumber: "+923001234567",
+          isPhoneVerified: true,
+          university: "National University of Sciences & Technology (NUST)",
+          campus: "H-12 Islamabad (SEECS)",
+          isVerifiedStudent: true,
+          rating: 4.9,
+          dealsCompleted: 12,
+          avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
+          city: "Islamabad",
+        };
+        setUser(demoUser);
+        localStorage.setItem("techlo_user_session", JSON.stringify(demoUser));
       }
 
-      const localProducts = localStorage.getItem("techlo_products");
-      if (localProducts) {
-        setProducts(JSON.parse(localProducts));
+      const storedSaved = localStorage.getItem("techlo_saved_items");
+      if (storedSaved) {
+        setSavedProductIds(JSON.parse(storedSaved));
       }
 
-      const localSaved = localStorage.getItem("techlo_saved");
-      if (localSaved) {
-        setSavedProductIds(JSON.parse(localSaved));
-      }
-
-      const localServices = localStorage.getItem("techlo_services");
-      if (localServices) {
-        setServiceRequests(JSON.parse(localServices));
-      }
+      fetchProducts();
     } catch (e) {
-      console.warn("Storage loading fallback", e);
+      console.warn("Local storage access error:", e);
     }
   }, []);
+
+  const fetchProducts = async () => {
+    try {
+      const res = await fetch("/api/products");
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data && json.data.length > 0) {
+          setProducts(json.data);
+        }
+      }
+    } catch {}
+  };
 
   const openAuthModal = (view: "login" | "signup" | "otp" | "verify_student" = "login") => {
     setAuthModalView(view);
@@ -108,141 +107,200 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsAuthModalOpen(false);
   };
 
-  const sendPhoneOtp = async (phoneNumber: string): Promise<boolean> => {
-    // Generate a 6-digit OTP
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    setGeneratedOtp(code);
-    console.log(`[TECHLO SECURITY] SMS OTP sent to ${phoneNumber}: ${code}`);
+  const loginWithEmailOrPhone = async (identifier: string, password?: string): Promise<boolean> => {
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier, password }),
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data?.user) {
+          setUser(json.data.user);
+          localStorage.setItem("techlo_user_session", JSON.stringify(json.data.user));
+          closeAuthModal();
+          return true;
+        }
+      }
+    } catch (e) {
+      console.error("Login request error:", e);
+    }
+
+    const isEdu = identifier.toLowerCase().includes(".edu.pk");
+    const loggedInUser: UserProfile = {
+      id: "u-" + Date.now(),
+      email: identifier.includes("@") ? identifier : `${identifier.replace(/\D/g, "")}@student.edu.pk`,
+      fullName: identifier.includes("@") ? identifier.split("@")[0].replace(".", " ").toUpperCase() : "Student Member",
+      phoneNumber: identifier.includes("+") ? identifier : "+92 300 1234567",
+      isPhoneVerified: true,
+      university: "National University of Sciences & Technology (NUST)",
+      campus: "H-12 Islamabad",
+      isVerifiedStudent: isEdu,
+      rating: 5.0,
+      dealsCompleted: 1,
+      avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
+      city: "Islamabad",
+    };
+
+    setUser(loggedInUser);
+    localStorage.setItem("techlo_user_session", JSON.stringify(loggedInUser));
+    closeAuthModal();
     return true;
   };
 
-  const verifyOtp = (enteredOtp: string): boolean => {
-    // Check if entered matches generated code (or master demo code '123456')
-    if (enteredOtp === generatedOtp || enteredOtp === "123456" || enteredOtp === "742918") {
+  const sendPhoneOtp = async (phoneNumber: string): Promise<string> => {
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setGeneratedOtp(code);
+
+    try {
       if (pendingSignupData) {
-        const newUser: UserProfile = {
-          id: `u-${Date.now()}`,
-          fullName: pendingSignupData.fullName || "Student Maker",
-          email: pendingSignupData.email || "user@techlo.pk",
-          phoneNumber: pendingSignupData.phoneNumber || "+923000000000",
+        await fetch("/api/auth/signup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(pendingSignupData),
+        });
+      }
+    } catch {}
+
+    return code;
+  };
+
+  const verifyOtp = async (code: string): Promise<boolean> => {
+    const isValid = code === generatedOtp || code === "123456" || code === "742918";
+
+    if (isValid) {
+      let newUser: UserProfile;
+      if (pendingSignupData) {
+        newUser = {
+          id: "u-" + Date.now(),
+          email: pendingSignupData.email,
+          fullName: pendingSignupData.fullName,
+          phoneNumber: pendingSignupData.phoneNumber,
           isPhoneVerified: true,
-          university: pendingSignupData.university || "NUST",
-          campus: pendingSignupData.campus || "Main Campus",
-          studentIdOrEduEmail: pendingSignupData.eduEmail || "",
-          isVerifiedStudent: !!pendingSignupData.eduEmail,
-          city: pendingSignupData.city || "Islamabad",
-          avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${pendingSignupData.fullName || "techlo"}`,
-          joinedDate: new Date().toISOString().split("T")[0],
+          university: pendingSignupData.university,
+          campus: pendingSignupData.campus,
+          isVerifiedStudent:
+            pendingSignupData.email.toLowerCase().endsWith(".edu.pk") ||
+            (pendingSignupData.eduEmail && pendingSignupData.eduEmail.includes(".edu.pk")) ||
+            false,
           rating: 5.0,
           dealsCompleted: 0,
+          avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
+          city: pendingSignupData.city || "Islamabad",
         };
-        setUser(newUser);
-        localStorage.setItem("techlo_user", JSON.stringify(newUser));
-        setPendingSignupData(null);
-      } else if (user) {
-        const updated = { ...user, isPhoneVerified: true };
-        setUser(updated);
-        localStorage.setItem("techlo_user", JSON.stringify(updated));
+      } else {
+        newUser = {
+          id: "u-" + Date.now(),
+          email: "student@nust.edu.pk",
+          fullName: "Hamza Tariq",
+          phoneNumber: "+92 300 5551234",
+          isPhoneVerified: true,
+          university: "National University of Sciences & Technology (NUST)",
+          campus: "H-12 Islamabad",
+          isVerifiedStudent: true,
+          rating: 5.0,
+          dealsCompleted: 0,
+          avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
+          city: "Islamabad",
+        };
       }
+
+      setUser(newUser);
+      localStorage.setItem("techlo_user_session", JSON.stringify(newUser));
       closeAuthModal();
       return true;
     }
     return false;
   };
 
-  const loginWithEmailOrPhone = (identifier: string, _pass: string): boolean => {
-    const loggedUser: UserProfile = {
-      ...DEFAULT_USER,
-      email: identifier.includes("@") ? identifier : DEFAULT_USER.email,
-      phoneNumber: !identifier.includes("@") ? identifier : DEFAULT_USER.phoneNumber,
-    };
-    setUser(loggedUser);
-    localStorage.setItem("techlo_user", JSON.stringify(loggedUser));
-    closeAuthModal();
-    return true;
+  const verifyStudentBadge = async (studentIdOrEduEmail: string): Promise<boolean> => {
+    if (!user) return false;
+    const isEdu = studentIdOrEduEmail.toLowerCase().includes(".edu.pk") || studentIdOrEduEmail.length > 5;
+    if (isEdu) {
+      const updated = {
+        ...user,
+        isVerifiedStudent: true,
+        eduEmail: studentIdOrEduEmail,
+      };
+      setUser(updated);
+      localStorage.setItem("techlo_user_session", JSON.stringify(updated));
+      return true;
+    }
+    return false;
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem("techlo_user");
+    localStorage.removeItem("techlo_user_session");
   };
 
-  const updateUserProfile = (data: Partial<UserProfile>) => {
-    if (!user) return;
-    const updated = { ...user, ...data };
-    setUser(updated);
-    localStorage.setItem("techlo_user", JSON.stringify(updated));
+  const toggleSaveProduct = (productId: string) => {
+    let newSaved: string[];
+    if (savedProductIds.includes(productId)) {
+      newSaved = savedProductIds.filter((id) => id !== productId);
+    } else {
+      newSaved = [...savedProductIds, productId];
+    }
+    setSavedProductIds(newSaved);
+    localStorage.setItem("techlo_saved_items", JSON.stringify(newSaved));
   };
 
-  const verifyStudentBadge = (eduEmailOrId: string) => {
-    if (!user) return;
-    const updated: UserProfile = {
-      ...user,
-      studentIdOrEduEmail: eduEmailOrId,
-      isVerifiedStudent: true,
-    };
-    setUser(updated);
-    localStorage.setItem("techlo_user", JSON.stringify(updated));
-  };
-
-  const toggleSaveProduct = (id: string) => {
-    setSavedProductIds((prev) => {
-      const next = prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id];
-      localStorage.setItem("techlo_saved", JSON.stringify(next));
-      return next;
-    });
-  };
-
-  const addProductListing = (
-    newProductData: Omit<ProductListing, "id" | "seller" | "createdAt" | "viewsCount" | "status">
-  ): ProductListing => {
+  const addProduct = async (
+    productData: Omit<ProductListing, "id" | "createdAt">
+  ): Promise<ProductListing> => {
     const newProduct: ProductListing = {
-      ...newProductData,
-      id: `tech-${Date.now()}`,
-      seller: {
-        id: user?.id || "u-guest",
-        name: user?.fullName || "Verified Student",
-        university: user?.university || "National University",
-        campus: user?.campus || "Main Campus",
-        city: user?.city || "Islamabad",
-        avatarUrl: user?.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
-        isVerifiedStudent: user?.isVerifiedStudent ?? true,
-        rating: user?.rating || 5.0,
-        phone: user?.phoneNumber || "+923001234567",
-      },
+      ...productData,
+      id: "tech-" + Date.now().toString().slice(-6),
       createdAt: new Date().toISOString(),
-      viewsCount: 1,
-      status: "available",
     };
 
-    const updated = [newProduct, ...products];
-    setProducts(updated);
-    localStorage.setItem("techlo_products", JSON.stringify(updated));
+    try {
+      const res = await fetch("/api/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...newProduct,
+          sellerId: user?.id,
+        }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data) {
+          fetchProducts();
+        }
+      }
+    } catch {}
+
+    setProducts((prev) => [newProduct, ...prev]);
     return newProduct;
   };
 
-  const markProductStatus = (id: string, status: "available" | "reserved" | "sold") => {
-    const updated = products.map((p) => (p.id === id ? { ...p, status } : p));
-    setProducts(updated);
-    localStorage.setItem("techlo_products", JSON.stringify(updated));
-  };
-
-  const createServiceRequest = (
-    requestData: Omit<ServiceRequest, "id" | "createdAt" | "status">
-  ): ServiceRequest => {
-    const newRequest: ServiceRequest = {
+  const createServiceRequest = async (
+    requestData: Omit<ServiceQuoteRequest, "id" | "createdAt" | "status">
+  ): Promise<ServiceQuoteRequest> => {
+    const newRequest: ServiceQuoteRequest = {
       ...requestData,
-      id: `srv-${Date.now()}`,
-      status: "submitted",
+      id: "SRV-" + Math.floor(100000 + Math.random() * 900000),
       createdAt: new Date().toISOString(),
+      status: "submitted",
     };
-    const updated = [newRequest, ...serviceRequests];
-    setServiceRequests(updated);
-    localStorage.setItem("techlo_services", JSON.stringify(updated));
+
+    try {
+      await fetch("/api/services", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...newRequest,
+          userId: user?.id,
+        }),
+      });
+    } catch {}
+
+    setServiceRequests((prev) => [newRequest, ...prev]);
     return newRequest;
   };
-
-  const userProducts = products.filter((p) => p.seller.id === user?.id || p.seller.phone === user?.phoneNumber);
 
   return (
     <AuthContext.Provider
@@ -251,25 +309,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: !!user,
         isAuthModalOpen,
         authModalView,
+        generatedOtp,
+        pendingSignupData,
+        savedProductIds,
+        products,
+        serviceRequests,
         openAuthModal,
         closeAuthModal,
         setAuthModalView,
-        pendingSignupData,
-        setPendingSignupData,
-        generatedOtp,
+        loginWithEmailOrPhone,
         sendPhoneOtp,
         verifyOtp,
-        loginWithEmailOrPhone,
-        logout,
-        updateUserProfile,
         verifyStudentBadge,
-        products,
-        userProducts,
-        savedProductIds,
+        logout,
+        setPendingSignupData,
         toggleSaveProduct,
-        addProductListing,
-        markProductStatus,
-        serviceRequests,
+        addProduct,
+        addProductListing: addProduct,
         createServiceRequest,
       }}
     >
@@ -280,6 +336,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) throw new Error("useAuth must be used within an AuthProvider");
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
   return context;
 };

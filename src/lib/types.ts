@@ -39,8 +39,8 @@ export interface UserProfile {
   studentIdOrEduEmail?: string;
   isVerifiedStudent: boolean;
   city: string;
-  avatarUrl: string;
-  joinedDate: string;
+  avatarUrl?: string;
+  joinedDate?: string;
   rating: number;
   dealsCompleted: number;
 }
@@ -59,6 +59,7 @@ export interface ProductListing {
   seller: {
     id: string;
     name: string;
+    email?: string;
     university: string;
     campus: string;
     city: string;
@@ -91,8 +92,10 @@ export interface ServiceRequest {
   clientPhone: string;
   files: Array<{ name: string; size: string; type: string }>;
   estimatedCostPkr: number;
-  status: "submitted" | "under_review" | "quoted" | "in_progress" | "completed";
+  status: "submitted" | "under_review" | "quoted" | "in_progress" | "completed" | "cancelled";
   createdAt: string;
   deadline?: string;
   customSpecs?: { [key: string]: string | number };
 }
+
+export type ServiceQuoteRequest = ServiceRequest;

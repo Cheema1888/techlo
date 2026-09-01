@@ -1,0 +1,106 @@
+// TECHLO Production Database Schema
+// Optimized for SQLite locally and seamless migration to PostgreSQL on Vercel/Supabase/Railway
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String           @id @default(uuid())
+  email               String           @unique
+  fullName            String
+  passwordHash        String?
+  phoneNumber         String           @unique
+  isPhoneVerified     Boolean          @default(false)
+  otpCode             String?
+  otpExpiresAt        DateTime?
+  university          String
+  campus              String?
+  studentIdOrEduEmail String?
+  isVerifiedStudent   Boolean          @default(false)
+  city                String           @default("Islamabad")
+  avatarUrl           String?
+  rating              Float            @default(5.0)
+  dealsCompleted      Int              @default(0)
+  role                String           @default("STUDENT")
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  products            Product[]
+  serviceRequests     ServiceRequest[]
+  savedItems          SavedItem[]
+
+  @@index([email])
+  @@index([phoneNumber])
+  @@index([university])
+}
+
+model Product {
+  id                String       @id @default(uuid())
+  title             String
+  category          String       // microcontrollers, sensors, motors_actuators, power_bms, etc.
+  condition         String       // brand_new, fyp_tested, gently_used, desoldered_working, for_parts
+  pricePkr          Float
+  originalPricePkr  Float?
+  isNegotiable      Boolean      @default(true)
+  imagesJson        String       // JSON stringified array of image URLs
+  description       String
+  specsJson         String?      // JSON stringified technical specifications dictionary
+  quantityAvailable Int          @default(1)
+  status            String       @default("available") // available, reserved, sold
+  location          String
+  city              String       @default("Islamabad")
+  viewsCount        Int          @default(0)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  sellerId          String
+  seller            User         @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  savedBy           SavedItem[]
+
+  @@index([category])
+  @@index([condition])
+  @@index([sellerId])
+  @@index([city])
+}
+
+model ServiceRequest {
+  id                String       @id @default(uuid())
+  serviceType       String       // pcb_design, pcb_fabrication, cad_3d_modeling, 3d_printing, firmware_embedded
+  title             String
+  description       String
+  clientName        String
+  clientUniversity  String
+  clientPhone       String
+  filesJson         String?      // JSON stringified array of uploaded files
+  estimatedCostPkr  Float
+  status            String       @default("submitted") // submitted, under_review, quoted, in_progress, completed, cancelled
+  deadline          String?
+  customSpecsJson   String?      // JSON stringified custom design parameters
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  userId            String?
+  user              User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([serviceType])
+  @@index([status])
+}
+
+model SavedItem {
+  id        String   @id @default(uuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([userId])
+}

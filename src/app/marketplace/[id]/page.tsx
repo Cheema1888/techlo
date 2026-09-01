@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/authContext";
@@ -11,48 +11,73 @@ import {
   MapPin,
   ShieldCheck,
   MessageCircle,
-  Sparkles,
   ArrowLeft,
   CheckCircle2,
   AlertTriangle,
   Send,
   Eye,
   Check,
+  Tag,
+  Clock,
+  Sparkles,
 } from "lucide-react";
 import { ProductCard } from "@/components/marketplace/ProductCard";
 
 export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { products, savedProductIds, toggleSaveProduct, openAuthModal, user } = useAuth();
+  const { products, savedProductIds, toggleSaveProduct } = useAuth();
   const productId = params?.id as string;
 
-  const product = products.find((p) => p.id === productId) || products[0];
-  const isSaved = savedProductIds.includes(product.id);
-  const conditionInfo = getConditionBadge(product.condition);
-
+  const [productData, setProductData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [offerPrice, setOfferPrice] = useState(product.pricePkr.toString());
-  const [inquiryMessage, setInquiryMessage] = useState("");
+  const [offerPrice, setOfferPrice] = useState("");
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [inquirySentSuccess, setInquirySentSuccess] = useState(false);
 
+  useEffect(() => {
+    // 1. Check local context first
+    const found = products.find((p) => p.id === productId);
+    if (found) {
+      setProductData(found);
+      setOfferPrice(found.pricePkr.toString());
+      setLoading(false);
+    }
+
+    // 2. Fetch fresh from API
+    fetch(`/api/products/${productId}`)
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success && json.data) {
+          setProductData(json.data);
+          setOfferPrice(json.data.pricePkr.toString());
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [productId, products]);
+
+  const product = productData || products[0];
+  const isSaved = savedProductIds.includes(product?.id);
+  const conditionInfo = getConditionBadge(product?.condition || "fyp_tested");
+
   // WhatsApp Link
-  const cleanPhone = product.seller.phone.replace(/[^0-9]/g, "");
+  const cleanPhone = (product?.seller?.phone || "").replace(/[^0-9]/g, "");
   const whatsappMessage = encodeURIComponent(
-    `Assalam-o-Alaikum ${product.seller.name}! I saw your listing for "${product.title}" on TECHLO (Rs. ${product.pricePkr.toLocaleString()}). Is it still available for handoff at ${product.seller.campus}?`
+    `Assalam-o-Alaikum ${product?.seller?.name}! I saw your listing for "${product?.title}" on TECHLO (Rs. ${product?.pricePkr?.toLocaleString()}). Is it still available for campus handoff at ${product?.seller?.campus || product?.location}?`
   );
   const whatsappUrl = `https://wa.me/${cleanPhone}?text=${whatsappMessage}`;
 
   const handleShare = () => {
-    if (navigator.share) {
+    if (typeof window !== "undefined" && navigator.share) {
       navigator.share({
         title: product.title,
         text: `Check out ${product.title} on TECHLO for ${formatPKR(product.pricePkr)}`,
         url: window.location.href,
       });
-    } else {
+    } else if (typeof window !== "undefined") {
       navigator.clipboard.writeText(window.location.href);
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
@@ -69,16 +94,49 @@ export default function ProductDetailPage() {
   };
 
   const relatedProducts = products
-    .filter((p) => p.id !== product.id && (p.category === product.category || p.seller.university === product.seller.university))
+    .filter((p) => p.id !== product?.id && (p.category === product?.category || p.seller?.university === product?.seller?.university))
     .slice(0, 4);
 
+  if (loading && !product) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-20 text-center font-mono">
+        <p className="text-neutral-500">Loading hardware details...</p>
+      </div>
+    );
+  }
+
+  // Schema.org Product JSON-LD for On-Page SEO
+  const productJsonLd = {
+    "@context": "https://schema.org/",
+    "@type": "Product",
+    name: product.title,
+    image: product.images,
+    description: product.description,
+    offers: {
+      "@type": "Offer",
+      priceCurrency: "PKR",
+      price: product.pricePkr,
+      availability: "https://schema.org/InStock",
+      seller: {
+        "@type": "Person",
+        name: product.seller.name,
+      },
+    },
+  };
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10 font-mono">
+      {/* JSON-LD Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      />
+
       {/* Back Button */}
       <div>
         <Link
           href="/marketplace"
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-techlo-cyan transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-500 hover:text-black dark:hover:text-white transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Marketplace</span>
@@ -90,7 +148,7 @@ export default function ProductDetailPage() {
         {/* Left Gallery (7 cols) */}
         <div className="lg:col-span-7 space-y-4">
           {/* Active Image */}
-          <div className="relative aspect-[4/3] w-full rounded-3xl overflow-hidden bg-techlo-surface border border-techlo-border shadow-2xl">
+          <div className="relative aspect-[4/3] w-full rounded-2xl overflow-hidden bg-neutral-100 dark:bg-[#0a0a0a] border border-neutral-200 dark:border-neutral-800 shadow-sm">
             <img
               src={product.images[activeImageIndex] || product.images[0]}
               alt={product.title}
@@ -98,63 +156,67 @@ export default function ProductDetailPage() {
             />
 
             {/* Condition Tag */}
-            <div className="absolute top-4 left-4">
-              <span
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border backdrop-blur-md shadow-lg ${conditionInfo.badgeClass}`}
-              >
-                {product.condition === "fyp_tested" && <Sparkles className="w-3.5 h-3.5" />}
+            <div className="absolute top-4 left-4 z-10">
+              <span className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-mono font-bold ${conditionInfo.badgeClass}`}>
                 {conditionInfo.label}
               </span>
             </div>
 
-            {/* Quantity Available */}
-            <div className="absolute bottom-4 left-4 px-3 py-1 rounded-lg bg-techlo-dark/90 border border-techlo-border text-xs text-slate-300 backdrop-blur-md">
-              Available: <strong className="text-white font-mono">{product.quantityAvailable} units</strong>
-            </div>
+            {/* Wishlist Button */}
+            <button
+              onClick={() => toggleSaveProduct(product.id)}
+              className={`absolute top-4 right-4 z-10 p-2.5 rounded-xl backdrop-blur-md transition-all cursor-pointer ${
+                isSaved
+                  ? "bg-black text-white dark:bg-white dark:text-black"
+                  : "bg-white/80 dark:bg-black/60 text-black dark:text-white hover:bg-white dark:hover:bg-black"
+              }`}
+            >
+              <Heart className={`w-4 h-4 ${isSaved ? "fill-current" : ""}`} />
+            </button>
           </div>
 
           {/* Thumbnails */}
           {product.images.length > 1 && (
-            <div className="flex items-center gap-3">
-              {product.images.map((img, idx) => (
+            <div className="flex gap-3 overflow-x-auto pb-1">
+              {product.images.map((img: string, idx: number) => (
                 <button
                   key={idx}
                   onClick={() => setActiveImageIndex(idx)}
-                  className={`relative w-20 h-20 rounded-2xl overflow-hidden border-2 transition-all cursor-pointer ${
+                  className={`relative w-20 h-20 rounded-xl overflow-hidden border-2 flex-shrink-0 transition-all cursor-pointer ${
                     activeImageIndex === idx
-                      ? "border-techlo-cyan shadow-glow-cyan"
-                      : "border-techlo-border opacity-60 hover:opacity-100"
+                      ? "border-black dark:border-white"
+                      : "border-neutral-200 dark:border-neutral-800 opacity-60 hover:opacity-100"
                   }`}
                 >
-                  <img src={img} alt="Thumbnail" className="w-full h-full object-cover" />
+                  <img src={img} alt={`View ${idx + 1}`} className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>
           )}
 
-          {/* Description & Technical Details */}
-          <div className="bg-techlo-dark border border-techlo-border rounded-3xl p-6 lg:p-8 space-y-6">
-            <div className="space-y-2">
-              <h3 className="text-lg font-bold text-white tracking-tight">Component Description</h3>
-              <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-line">
-                {product.description}
-              </p>
-            </div>
+          {/* Description Section */}
+          <div className="p-6 rounded-2xl bg-white dark:bg-[#0a0a0a] border border-neutral-200 dark:border-neutral-800 space-y-4 shadow-sm">
+            <h2 className="text-sm font-bold text-black dark:text-white uppercase tracking-wider">
+              Component Details & Description
+            </h2>
+            <p className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed whitespace-pre-line font-sans">
+              {product.description}
+            </p>
 
-            {/* Specs Table */}
+            {/* Technical Specifications Table */}
             {product.specs && Object.keys(product.specs).length > 0 && (
-              <div className="space-y-3 pt-4 border-t border-techlo-border/60">
-                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                  Technical Specifications & Included Items
-                </h4>
+              <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800 space-y-3">
+                <h3 className="text-xs font-bold text-black dark:text-white uppercase">
+                  Technical Specifications
+                </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                   {Object.entries(product.specs).map(([key, val]) => (
                     <div
                       key={key}
-                      className="p-3 bg-techlo-surface/50 border border-techlo-border/60 rounded-xl flex justify-between gap-2"
+                      className="p-2.5 rounded-lg bg-neutral-50 dark:bg-[#121212] border border-neutral-200 dark:border-neutral-800 flex justify-between gap-2"
                     >
-                      <span className="text-slate-400 font-medium">{key}</span>
-                      <span className="text-white font-semibold text-right">{val}</span>
+                      <span className="text-neutral-500 font-medium">{key}:</span>
+                      <span className="text-black dark:text-white font-bold text-right truncate">{String(val)}</span>
                     </div>
                   ))}
                 </div>
@@ -163,188 +225,142 @@ export default function ProductDetailPage() {
           </div>
         </div>
 
-        {/* Right Info & Seller Column (5 cols) */}
-        <div className="lg:col-span-5 space-y-6">
-          {/* Price & Primary Actions Card */}
-          <div className="bg-techlo-dark border border-techlo-border rounded-3xl p-6 space-y-5 shadow-2xl">
+        {/* Right Details Column (5 cols) */}
+        <div className="lg:col-span-5 space-y-5">
+          {/* Main Pricing Card */}
+          <div className="p-6 sm:p-7 rounded-2xl bg-white dark:bg-[#0a0a0a] border border-neutral-200 dark:border-neutral-800 space-y-5 shadow-sm">
             <div>
-              <span className="text-xs font-bold text-techlo-cyan uppercase tracking-wider">
+              <span className="text-[10px] uppercase font-bold text-neutral-500 tracking-wider">
                 {getCategoryLabel(product.category)}
               </span>
-              <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight mt-1">
+              <h1 className="text-xl sm:text-2xl font-bold text-black dark:text-white mt-1 leading-snug">
                 {product.title}
               </h1>
             </div>
 
             {/* Price Row */}
-            <div className="p-4 bg-techlo-surface/70 border border-techlo-border rounded-2xl flex items-baseline justify-between">
-              <div>
-                <span className="text-xs text-slate-400 block mb-0.5">Offered Price</span>
-                <div className="font-mono text-3xl font-black text-techlo-sky">
-                  {formatPKR(product.pricePkr)}
-                </div>
-              </div>
-
+            <div className="flex items-baseline gap-3 pt-2 border-t border-neutral-200 dark:border-neutral-800">
+              <span className="text-3xl font-black text-black dark:text-white">
+                {formatPKR(product.pricePkr)}
+              </span>
               {product.originalPricePkr && (
-                <div className="text-right">
-                  <span className="text-[10px] text-slate-400 block">Retail New</span>
-                  <span className="text-xs text-slate-400 line-through">
-                    {formatPKR(product.originalPricePkr)}
-                  </span>
-                </div>
+                <span className="text-xs text-neutral-400 line-through">
+                  {formatPKR(product.originalPricePkr)}
+                </span>
+              )}
+              {product.isNegotiable && (
+                <span className="text-[11px] text-neutral-500 font-medium">
+                  (Price Negotiable)
+                </span>
               )}
             </div>
 
-            {/* Action Buttons */}
-            <div className="space-y-2.5">
+            {/* Actions */}
+            <div className="space-y-2.5 pt-2">
               <a
                 href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3 bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black font-bold text-xs rounded-xl shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
-                <MessageCircle className="w-5 h-5" />
+                <MessageCircle className="w-4 h-4" />
                 <span>Chat on WhatsApp</span>
               </a>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="flex gap-2">
                 <button
                   onClick={() => setIsInquiryModalOpen(true)}
-                  className="w-full py-3 bg-techlo-surface hover:bg-techlo-border border border-techlo-border text-white font-semibold text-xs rounded-xl transition-all cursor-pointer"
+                  className="flex-1 py-2.5 bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-800 text-black dark:text-white text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  Make an Offer in App
+                  <Tag className="w-3.5 h-3.5" />
+                  <span>Make Price Offer</span>
                 </button>
 
                 <button
-                  onClick={() => toggleSaveProduct(product.id)}
-                  className={`w-full py-3 border rounded-xl font-semibold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                    isSaved
-                      ? "bg-rose-500/20 border-rose-500/40 text-rose-300"
-                      : "bg-techlo-surface hover:bg-techlo-border border-techlo-border text-slate-300"
-                  }`}
+                  onClick={handleShare}
+                  className="p-2.5 bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-800 text-black dark:text-white rounded-xl transition-all cursor-pointer flex items-center justify-center"
+                  title="Share listing"
                 >
-                  <Heart className={`w-4 h-4 ${isSaved ? "fill-rose-400 text-rose-400" : ""}`} />
-                  <span>{isSaved ? "Saved" : "Save Item"}</span>
+                  {isCopied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
                 </button>
               </div>
-
-              <button
-                onClick={handleShare}
-                className="w-full py-2 text-xs text-slate-400 hover:text-white flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                {isCopied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5" />}
-                <span>{isCopied ? "Link Copied to Clipboard!" : "Share Listing with Classmates"}</span>
-              </button>
             </div>
           </div>
 
-          {/* Seller Card */}
-          <div className="bg-techlo-dark border border-techlo-border rounded-3xl p-6 space-y-4">
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+          {/* Seller Profile Card */}
+          <div className="p-5 rounded-2xl bg-white dark:bg-[#0a0a0a] border border-neutral-200 dark:border-neutral-800 space-y-4 shadow-sm text-xs">
+            <span className="text-[10px] uppercase font-bold text-neutral-500 tracking-wider block">
               Seller Information
-            </h4>
+            </span>
 
-            <div className="flex items-start gap-3.5">
+            <div className="flex items-center gap-3">
               <img
-                src={product.seller.avatarUrl}
+                src={product.seller.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"}
                 alt={product.seller.name}
-                className="w-12 h-12 rounded-2xl object-cover border-2 border-techlo-cyan/50 shadow-md"
+                className="w-11 h-11 rounded-xl object-cover border border-neutral-200 dark:border-neutral-800"
               />
-              <div className="min-w-0 flex-1">
+              <div className="space-y-0.5">
                 <div className="flex items-center gap-1.5">
-                  <h3 className="font-bold text-white text-base truncate">{product.seller.name}</h3>
+                  <span className="font-bold text-black dark:text-white text-sm">
+                    {product.seller.name}
+                  </span>
                   {product.seller.isVerifiedStudent && (
-                    <span title="Verified Pakistani Student">
-                      <ShieldCheck className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                    </span>
+                    <ShieldCheck className="w-4 h-4 text-black dark:text-white" />
                   )}
                 </div>
-                <p className="text-xs text-techlo-sky font-semibold">{product.seller.university}</p>
-                <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
-                  <MapPin className="w-3 h-3 text-techlo-cyan" />
-                  {product.seller.campus}
+                <p className="text-[11px] text-neutral-500">
+                  {product.seller.university}
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 pt-2 text-xs border-t border-techlo-border/60">
-              <div className="p-2.5 bg-techlo-surface/50 rounded-xl border border-techlo-border/50 text-center">
-                <span className="text-[10px] text-slate-400 block">Seller Rating</span>
-                <span className="font-bold text-amber-400 text-sm">★ {product.seller.rating.toFixed(1)} / 5.0</span>
+            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400">
+              <div className="p-2 bg-neutral-50 dark:bg-[#121212] rounded-lg">
+                <span className="block text-[10px] text-neutral-500">Pickup Campus</span>
+                <strong className="text-black dark:text-white truncate block">{product.location || product.seller.campus}</strong>
               </div>
-              <div className="p-2.5 bg-techlo-surface/50 rounded-xl border border-techlo-border/50 text-center">
-                <span className="text-[10px] text-slate-400 block">Phone Status</span>
-                <span className="font-bold text-emerald-400 text-sm">OTP Verified</span>
+              <div className="p-2 bg-neutral-50 dark:bg-[#121212] rounded-lg">
+                <span className="block text-[10px] text-neutral-500">Deals Done</span>
+                <strong className="text-black dark:text-white">{product.seller.dealsCompleted || 8} completed</strong>
               </div>
             </div>
-          </div>
-
-          {/* Student Campus Safety Tips */}
-          <div className="p-5 bg-techlo-surface/40 border border-techlo-border rounded-3xl space-y-2 text-xs text-slate-300">
-            <div className="flex items-center gap-2 font-bold text-white">
-              <ShieldCheck className="w-4 h-4 text-techlo-cyan" />
-              <span>Campus Trade Safety Guidelines</span>
-            </div>
-            <ul className="space-y-1.5 text-[11px] text-slate-400 list-disc pl-4">
-              <li>Prefer meeting inside your university campus (Department Lab, Library or Cafeteria).</li>
-              <li>Test boards using your laptop / multimeter before making cash payment.</li>
-              <li>For inter-city deals, request test video with timestamp before Leopard/TCS dispatch.</li>
-            </ul>
           </div>
         </div>
       </div>
 
-      {/* Inquiry Modal */}
+      {/* Offer Modal */}
       {isInquiryModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="relative w-full max-w-md bg-techlo-dark border border-techlo-border rounded-3xl p-6 space-y-4 shadow-2xl">
-            <h3 className="text-lg font-bold text-white">Send Offer / Inquire in App</h3>
-            <p className="text-xs text-slate-400">
-              Contact <strong className="text-white">{product.seller.name}</strong> regarding {product.title}.
-            </p>
-
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
+          <div className="relative w-full max-w-sm bg-white dark:bg-[#0a0a0a] border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 space-y-4 shadow-2xl">
+            <h3 className="text-base font-bold text-black dark:text-white">Make an Offer to {product.seller.name}</h3>
             {inquirySentSuccess ? (
-              <div className="p-6 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-center space-y-2">
-                <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto" />
-                <h4 className="font-bold text-white">Offer Sent!</h4>
-                <p className="text-xs text-emerald-300">
-                  The seller has received your notification and offer in PKR.
-                </p>
+              <div className="p-4 bg-neutral-100 dark:bg-[#121212] rounded-xl text-center space-y-2">
+                <Check className="w-8 h-8 text-black dark:text-white mx-auto" />
+                <p className="text-xs font-bold text-black dark:text-white">Offer dispatched via WhatsApp!</p>
               </div>
             ) : (
-              <form onSubmit={handleSendInquiry} className="space-y-3">
+              <form onSubmit={handleSendInquiry} className="space-y-3 text-xs">
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">Your Offer Price (PKR)</label>
+                  <label className="text-neutral-500 uppercase text-[10px]">Your Offer (PKR)</label>
                   <input
                     type="number"
+                    required
                     value={offerPrice}
                     onChange={(e) => setOfferPrice(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-techlo-surface border border-techlo-border rounded-xl text-white font-mono text-sm"
+                    className="w-full p-2.5 bg-neutral-50 dark:bg-[#121212] border border-neutral-200 dark:border-neutral-800 rounded-xl text-black dark:text-white font-bold"
                   />
                 </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">Message / Pickup Location</label>
-                  <textarea
-                    rows={3}
-                    placeholder="e.g. Can we meet at SEECS Lab tomorrow at 2 PM?"
-                    value={inquiryMessage}
-                    onChange={(e) => setInquiryMessage(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-techlo-surface border border-techlo-border rounded-xl text-white text-xs placeholder-slate-500"
-                  />
-                </div>
-
                 <div className="flex gap-2 pt-2">
                   <button
                     type="button"
                     onClick={() => setIsInquiryModalOpen(false)}
-                    className="flex-1 py-2.5 bg-techlo-surface hover:bg-techlo-border text-slate-300 rounded-xl text-xs font-semibold cursor-pointer"
+                    className="flex-1 py-2 bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-xl font-bold cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-2.5 bg-techlo-cyan hover:bg-techlo-sky text-techlo-dark rounded-xl text-xs font-bold shadow-glow-cyan cursor-pointer"
+                    className="flex-1 py-2 bg-black dark:bg-white text-white dark:text-black rounded-xl font-bold cursor-pointer"
                   >
                     Send Offer
                   </button>
@@ -357,9 +373,11 @@ export default function ProductDetailPage() {
 
       {/* Related Products */}
       {relatedProducts.length > 0 && (
-        <div className="space-y-6 pt-8 border-t border-techlo-border/60">
-          <h3 className="text-xl font-bold text-white">More Components You Might Need</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="pt-10 border-t border-neutral-200 dark:border-neutral-800 space-y-5">
+          <h2 className="text-lg font-bold text-black dark:text-white">
+            Similar Hardware on Campus
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {relatedProducts.map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}

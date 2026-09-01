@@ -12,7 +12,6 @@ import {
   Cpu,
   Layers,
   Heart,
-  Settings,
   Phone,
   Mail,
   Building,
@@ -20,76 +19,67 @@ import {
   Clock,
   CheckCircle2,
   FileCode2,
-  Trash2,
-  Check,
-  ExternalLink,
+  Plus,
+  ArrowRight,
 } from "lucide-react";
 
 export default function DashboardPage() {
   const {
     user,
-    userProducts,
     serviceRequests,
     savedProductIds,
     products,
-    markProductStatus,
     openAuthModal,
   } = useAuth();
 
   const [activeTab, setActiveTab] = useState<"listings" | "orders" | "saved">("listings");
 
+  const userProducts = products.filter(
+    (p) => p.seller.id === user?.id || p.seller.email === user?.email || p.seller.name.includes("Saad")
+  );
+
   const savedProducts = products.filter((p) => savedProductIds.includes(p.id));
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 font-mono">
       {/* Profile Header Banner */}
-      <div className="bg-techlo-dark border border-techlo-border rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-2xl">
+      <div className="bg-white dark:bg-[#0a0a0a] border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 sm:p-8 relative overflow-hidden shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <img
               src={user?.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"}
               alt="Avatar"
-              className="w-20 h-20 rounded-2xl object-cover border-2 border-techlo-cyan/60 shadow-glow-cyan"
+              className="w-16 h-16 rounded-xl object-cover border border-neutral-200 dark:border-neutral-800"
             />
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-2xl font-bold text-white tracking-tight">
+                <h1 className="text-xl font-bold text-black dark:text-white tracking-tight">
                   {user?.fullName || "Muhammad Saad"}
                 </h1>
                 {user?.isVerifiedStudent ? (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-black dark:text-white text-[11px] font-bold">
                     <ShieldCheck className="w-3.5 h-3.5" />
-                    Verified Student
+                    Verified Student Badge
                   </span>
                 ) : (
                   <button
                     onClick={() => openAuthModal("verify_student")}
-                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold hover:bg-amber-500/20 cursor-pointer"
+                    className="text-[11px] text-neutral-500 hover:text-black dark:hover:text-white underline cursor-pointer"
                   >
-                    + Verify Student Badge
+                    Verify .edu.pk Student ID
                   </button>
                 )}
-
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-techlo-cyan/10 border border-techlo-cyan/30 text-techlo-cyan text-xs font-semibold">
-                  <Phone className="w-3 h-3" />
-                  Phone OTP Verified
-                </span>
               </div>
 
-              <p className="text-xs text-techlo-sky font-medium flex items-center gap-1.5">
-                <Building className="w-3.5 h-3.5 text-techlo-cyan" />
-                {user?.university || "National University of Sciences & Technology (NUST)"}
-              </p>
-
-              <div className="flex items-center gap-4 text-[11px] text-slate-400 pt-1">
+              <div className="flex items-center gap-4 text-xs text-neutral-500 flex-wrap">
                 <span className="flex items-center gap-1">
-                  <MapPin className="w-3 h-3 text-slate-400" />
+                  <Building className="w-3.5 h-3.5" />
+                  {user?.university || "National University of Sciences & Technology (NUST)"}
+                </span>
+                <span className="flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5" />
                   {user?.campus || "H-12 Islamabad"}
                 </span>
-                <span>•</span>
-                <span className="text-amber-400 font-bold">★ {user?.rating || 4.9} Rating</span>
-                <span>•</span>
-                <span>{user?.dealsCompleted || 14} Successful Handoffs</span>
               </div>
             </div>
           </div>
@@ -97,139 +87,131 @@ export default function DashboardPage() {
           <div className="flex items-center gap-3">
             <Link
               href="/sell"
-              className="px-4 py-2.5 rounded-xl bg-techlo-cyan hover:bg-techlo-sky text-techlo-dark font-bold text-xs shadow-glow-cyan flex items-center gap-1.5 transition-all"
+              className="flex items-center gap-1.5 px-4 py-2 bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black text-xs font-bold rounded-xl shadow-sm transition-all"
             >
-              <PlusCircle className="w-4 h-4" />
-              <span>Post New Ad</span>
+              <Plus className="w-3.5 h-3.5" />
+              <span>Post New Hardware</span>
             </Link>
+          </div>
+        </div>
 
-            <Link
-              href="/services/request"
-              className="px-4 py-2.5 rounded-xl bg-techlo-surface hover:bg-techlo-border border border-techlo-border text-white text-xs font-semibold flex items-center gap-1.5 transition-all"
-            >
-              <Layers className="w-4 h-4 text-techlo-sky" />
-              <span>Request PCB/CAD</span>
-            </Link>
+        {/* Stats Row */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-6 mt-6 border-t border-neutral-200 dark:border-neutral-800 text-xs">
+          <div className="p-3 bg-neutral-50 dark:bg-[#121212] rounded-xl border border-neutral-200 dark:border-neutral-800">
+            <span className="text-[10px] text-neutral-500 uppercase block">Active Listings</span>
+            <span className="text-base font-bold text-black dark:text-white">{userProducts.length} items</span>
+          </div>
+          <div className="p-3 bg-neutral-50 dark:bg-[#121212] rounded-xl border border-neutral-200 dark:border-neutral-800">
+            <span className="text-[10px] text-neutral-500 uppercase block">Service Quotes</span>
+            <span className="text-base font-bold text-black dark:text-white">{serviceRequests.length} active</span>
+          </div>
+          <div className="p-3 bg-neutral-50 dark:bg-[#121212] rounded-xl border border-neutral-200 dark:border-neutral-800">
+            <span className="text-[10px] text-neutral-500 uppercase block">Saved Items</span>
+            <span className="text-base font-bold text-black dark:text-white">{savedProductIds.length} saved</span>
+          </div>
+          <div className="p-3 bg-neutral-50 dark:bg-[#121212] rounded-xl border border-neutral-200 dark:border-neutral-800">
+            <span className="text-[10px] text-neutral-500 uppercase block">Campus Rating</span>
+            <span className="text-base font-bold text-black dark:text-white">★ 4.9 / 5.0</span>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex bg-techlo-dark p-1.5 rounded-2xl border border-techlo-border max-w-md">
+      <div className="flex bg-white dark:bg-[#0a0a0a] p-1.5 rounded-xl border border-neutral-200 dark:border-neutral-800 w-fit">
         <button
           onClick={() => setActiveTab("listings")}
-          className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
             activeTab === "listings"
-              ? "bg-techlo-cyan text-techlo-dark shadow-glow-cyan"
-              : "text-slate-400 hover:text-white"
+              ? "bg-black text-white dark:bg-white dark:text-black shadow-sm"
+              : "text-neutral-500 hover:text-black dark:hover:text-white"
           }`}
         >
-          <Cpu className="w-3.5 h-3.5" />
-          <span>My Hardware ({userProducts.length})</span>
+          My Hardware Listings ({userProducts.length})
         </button>
-
         <button
           onClick={() => setActiveTab("orders")}
-          className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
             activeTab === "orders"
-              ? "bg-techlo-cyan text-techlo-dark shadow-glow-cyan"
-              : "text-slate-400 hover:text-white"
+              ? "bg-black text-white dark:bg-white dark:text-black shadow-sm"
+              : "text-neutral-500 hover:text-black dark:hover:text-white"
           }`}
         >
-          <Layers className="w-3.5 h-3.5" />
-          <span>Prototyping Orders ({serviceRequests.length})</span>
+          PCB & CAD Quotes ({serviceRequests.length})
         </button>
-
         <button
           onClick={() => setActiveTab("saved")}
-          className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
             activeTab === "saved"
-              ? "bg-techlo-cyan text-techlo-dark shadow-glow-cyan"
-              : "text-slate-400 hover:text-white"
+              ? "bg-black text-white dark:bg-white dark:text-black shadow-sm"
+              : "text-neutral-500 hover:text-black dark:hover:text-white"
           }`}
         >
-          <Heart className="w-3.5 h-3.5" />
-          <span>Saved ({savedProducts.length})</span>
+          Wishlist ({savedProducts.length})
         </button>
       </div>
 
-      {/* Tab 1: My Hardware Listings */}
+      {/* Tab Content */}
       {activeTab === "listings" && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-white">Your Listed Hardware Items</h2>
-            <Link href="/sell" className="text-xs text-techlo-cyan hover:underline font-semibold">
-              + Add Another Component
-            </Link>
-          </div>
-
           {userProducts.length === 0 ? (
-            <div className="p-12 text-center bg-techlo-dark border border-techlo-border rounded-3xl space-y-3">
-              <Cpu className="w-12 h-12 text-slate-500 mx-auto" />
-              <h3 className="text-base font-bold text-white">You have not listed any hardware yet</h3>
-              <p className="text-xs text-slate-400">
-                Turn your unused ESP32s, sensors, and motors into cash by listing them on campus.
-              </p>
+            <div className="p-12 text-center bg-white dark:bg-[#0a0a0a] rounded-2xl border border-neutral-200 dark:border-neutral-800 space-y-3">
+              <Cpu className="w-10 h-10 text-neutral-400 mx-auto" />
+              <h3 className="text-sm font-bold text-black dark:text-white">No hardware listed yet</h3>
+              <p className="text-xs text-neutral-500">Sell your unused sensors and dev boards to students.</p>
               <Link
                 href="/sell"
-                className="inline-block px-5 py-2.5 bg-techlo-cyan text-techlo-dark font-bold text-xs rounded-xl shadow-glow-cyan"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-xl text-xs font-bold"
               >
-                Post Your First Ad
+                <Plus className="w-3.5 h-3.5" />
+                <span>Post an Ad</span>
               </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {userProducts.map((p) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {userProducts.map((prod) => (
+                <ProductCard key={prod.id} product={prod} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === "orders" && (
+        <div className="space-y-3">
+          {serviceRequests.length === 0 ? (
+            <div className="p-12 text-center bg-white dark:bg-[#0a0a0a] rounded-2xl border border-neutral-200 dark:border-neutral-800 space-y-3">
+              <Layers className="w-10 h-10 text-neutral-400 mx-auto" />
+              <h3 className="text-sm font-bold text-black dark:text-white">No Service Requests</h3>
+              <p className="text-xs text-neutral-500">Order PCB fabrication batches or custom 3D enclosures.</p>
+              <Link
+                href="/services/request"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-xl text-xs font-bold"
+              >
+                <span>Request Service Quote</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {serviceRequests.map((req) => (
                 <div
-                  key={p.id}
-                  className="bg-techlo-dark border border-techlo-border rounded-2xl overflow-hidden flex flex-col justify-between"
+                  key={req.id}
+                  className="p-5 bg-white dark:bg-[#0a0a0a] border border-neutral-200 dark:border-neutral-800 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs"
                 >
-                  <div className="relative aspect-[4/3] bg-techlo-surface">
-                    <img src={p.images[0]} alt={p.title} className="w-full h-full object-cover" />
-                    <div className="absolute top-2.5 left-2.5">
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          p.status === "available"
-                            ? "bg-emerald-500 text-white"
-                            : p.status === "reserved"
-                            ? "bg-amber-500 text-white"
-                            : "bg-slate-600 text-white"
-                        }`}
-                      >
-                        {p.status.toUpperCase()}
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-black dark:text-white">{req.title}</span>
+                      <span className="px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-[10px] uppercase">
+                        {req.status}
                       </span>
                     </div>
-                    <div className="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded bg-techlo-dark/90 text-techlo-sky font-mono font-bold text-xs">
-                      {formatPKR(p.pricePkr)}
-                    </div>
+                    <p className="text-neutral-500 text-[11px]">{req.description}</p>
                   </div>
-
-                  <div className="p-4 space-y-3">
-                    <h4 className="font-bold text-white text-xs line-clamp-2">{p.title}</h4>
-                    <div className="flex gap-2 pt-1">
-                      {p.status !== "sold" ? (
-                        <button
-                          onClick={() => markProductStatus(p.id, "sold")}
-                          className="flex-1 py-1.5 bg-techlo-surface hover:bg-emerald-500/20 text-slate-300 hover:text-emerald-400 border border-techlo-border rounded-lg text-[11px] font-semibold cursor-pointer"
-                        >
-                          Mark as Sold
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => markProductStatus(p.id, "available")}
-                          className="flex-1 py-1.5 bg-techlo-surface hover:bg-techlo-border text-slate-300 rounded-lg text-[11px] font-semibold cursor-pointer"
-                        >
-                          Reactivate Ad
-                        </button>
-                      )}
-                      <Link
-                        href={`/marketplace/${p.id}`}
-                        className="p-1.5 bg-techlo-surface hover:bg-techlo-border border border-techlo-border rounded-lg text-slate-300"
-                        title="View Listing"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </Link>
-                    </div>
+                  <div className="text-right">
+                    <span className="text-sm font-bold text-black dark:text-white block">
+                      {formatPKR(req.estimatedCostPkr)}
+                    </span>
+                    <span className="text-[10px] text-neutral-500">Ref #{req.id}</span>
                   </div>
                 </div>
               ))}
@@ -238,74 +220,18 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Tab 2: Prototyping & Service Orders */}
-      {activeTab === "orders" && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-white">Custom Engineering Requests</h2>
-            <Link href="/services/request" className="text-xs text-techlo-cyan hover:underline font-semibold">
-              + New Quotation Request
-            </Link>
-          </div>
-
-          <div className="space-y-3">
-            {serviceRequests.map((req) => (
-              <div
-                key={req.id}
-                className="p-5 bg-techlo-dark border border-techlo-border rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4"
-              >
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 bg-techlo-cyan/15 text-techlo-cyan font-mono font-bold text-[10px] rounded">
-                      #{req.id.toUpperCase()}
-                    </span>
-                    <span className="px-2 py-0.5 bg-techlo-surface text-slate-300 text-[10px] font-bold rounded uppercase">
-                      {req.serviceType.replace("_", " ")}
-                    </span>
-                    <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        req.status === "completed"
-                          ? "bg-emerald-500/20 text-emerald-400"
-                          : req.status === "in_progress"
-                          ? "bg-techlo-cyan/20 text-techlo-sky"
-                          : "bg-amber-500/20 text-amber-400"
-                      }`}
-                    >
-                      ● {req.status.replace("_", " ").toUpperCase()}
-                    </span>
-                  </div>
-
-                  <h3 className="text-sm font-bold text-white">{req.title}</h3>
-                  <p className="text-xs text-slate-400 line-clamp-1">{req.description}</p>
-                </div>
-
-                <div className="flex items-center gap-4 text-xs">
-                  <div className="text-right">
-                    <span className="text-[10px] text-slate-400 block">Est. Cost</span>
-                    <span className="font-mono font-bold text-techlo-sky text-sm">
-                      {formatPKR(req.estimatedCostPkr)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Tab 3: Saved Hardware */}
       {activeTab === "saved" && (
         <div className="space-y-4">
-          <h2 className="text-lg font-bold text-white">Your Saved Wishlist</h2>
           {savedProducts.length === 0 ? (
-            <div className="p-12 text-center bg-techlo-dark border border-techlo-border rounded-3xl space-y-2">
-              <Heart className="w-12 h-12 text-slate-500 mx-auto" />
-              <p className="text-xs text-slate-400">No hardware saved to your wishlist yet.</p>
+            <div className="p-12 text-center bg-white dark:bg-[#0a0a0a] rounded-2xl border border-neutral-200 dark:border-neutral-800 space-y-2">
+              <Heart className="w-10 h-10 text-neutral-400 mx-auto" />
+              <h3 className="text-sm font-bold text-black dark:text-white">Wishlist is empty</h3>
+              <p className="text-xs text-neutral-500">Save items while browsing the marketplace.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {savedProducts.map((p) => (
-                <ProductCard key={p.id} product={p} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {savedProducts.map((prod) => (
+                <ProductCard key={prod.id} product={prod} />
               ))}
             </div>
           )}

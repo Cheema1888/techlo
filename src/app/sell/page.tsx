@@ -11,12 +11,12 @@ import {
   Plus,
   Trash2,
   CheckCircle2,
-  Sparkles,
   Camera,
   Layers,
   MapPin,
   Eye,
   AlertCircle,
+  ArrowRight,
 } from "lucide-react";
 
 export default function SellHardwarePage() {
@@ -37,7 +37,7 @@ export default function SellHardwarePage() {
   );
   const [city, setCity] = useState(user?.city || "Islamabad");
 
-  // Images state (URLs or Base64)
+  // Images state
   const [images, setImages] = useState<string[]>([
     "https://images.unsplash.com/photo-1555680202-c86f0e12f086?auto=format&fit=crop&w=800&q=80",
   ]);
@@ -59,408 +59,408 @@ export default function SellHardwarePage() {
     { label: "Sensor Module", url: "https://images.unsplash.com/photo-1563770660941-20978e870e26?auto=format&fit=crop&w=800&q=80" },
   ];
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      for (let i = 0; i < e.target.files.length; i++) {
-        const file = e.target.files[i];
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          if (reader.result) {
-            setImages((prev) => [...prev, reader.result as string]);
-          }
-        };
-        reader.readAsDataURL(file);
-      }
-    }
-  };
-
-  const addSpecRow = () => {
+  const handleAddSpec = () => {
     setSpecs([...specs, { key: "", value: "" }]);
   };
 
-  const updateSpec = (index: number, field: "key" | "value", val: string) => {
-    const next = [...specs];
-    next[index][field] = val;
-    setSpecs(next);
-  };
-
-  const removeSpec = (index: number) => {
+  const handleRemoveSpec = (index: number) => {
     setSpecs(specs.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSpecChange = (index: number, field: "key" | "value", val: string) => {
+    const updated = [...specs];
+    updated[index][field] = val;
+    setSpecs(updated);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!pricePkr || Number(pricePkr) <= 0) {
-      alert("Please enter a valid price in PKR");
+
+    if (!isAuthenticated) {
+      openAuthModal("signup");
+      return;
+    }
+
+    if (!title || !pricePkr || !description) {
+      alert("Please fill in the title, price, and description");
       return;
     }
 
     setIsSubmitting(true);
 
-    const specsObj: { [k: string]: string } = {};
+    const specsDict: { [key: string]: string } = {};
     specs.forEach((s) => {
       if (s.key.trim() && s.value.trim()) {
-        specsObj[s.key.trim()] = s.value.trim();
+        specsDict[s.key.trim()] = s.value.trim();
       }
     });
 
-    const newProd = addProductListing({
+    const newProduct = {
       title,
       category,
       condition,
-      pricePkr: Number(pricePkr),
-      originalPricePkr: originalPricePkr ? Number(originalPricePkr) : undefined,
+      pricePkr: parseFloat(pricePkr),
+      originalPricePkr: originalPricePkr ? parseFloat(originalPricePkr) : undefined,
       isNegotiable,
+      images: images.length > 0 ? images : ["https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80"],
       description,
-      specs: specsObj,
-      images: images.length > 0 ? images : [samplePhotoPresets[0].url],
+      specs: specsDict,
+      seller: {
+        id: user?.id || "u-anon",
+        name: user?.fullName || "Student Member",
+        email: user?.email || "student@nust.edu.pk",
+        university: user?.university || "NUST Islamabad",
+        campus: campusLocation,
+        city: city,
+        avatarUrl: user?.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
+        isVerifiedStudent: user?.isVerifiedStudent || true,
+        rating: 5.0,
+        phone: user?.phoneNumber || "+92 300 1234567",
+      },
       quantityAvailable: quantity,
-      location: campusLocation,
-    });
+      status: "available" as const,
+      viewsCount: 1,
+      location: `${campusLocation} (${city})`,
+    };
 
-    setTimeout(() => {
+    try {
+      await addProductListing(newProduct);
       setIsSubmitting(false);
       setPublishSuccess(true);
       setTimeout(() => {
-        router.push(`/marketplace/${newProd.id}`);
-      }, 1200);
-    }, 800);
+        router.push("/marketplace");
+      }, 1500);
+    } catch (err) {
+      setIsSubmitting(false);
+      alert("Failed to publish listing. Please try again.");
+    }
   };
 
-  const conditionDetails = getConditionBadge(condition);
+  const conditionInfo = getConditionBadge(condition);
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 font-mono">
       {/* Header */}
-      <div className="text-center max-w-2xl mx-auto space-y-2">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-techlo-cyan/15 border border-techlo-cyan/30 text-techlo-cyan text-xs font-bold">
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Post Hardware in 60 Seconds</span>
-        </div>
-        <h1 className="text-3xl sm:text-4xl font-display font-black text-white tracking-tight">
-          List Your Spare Hardware
+      <div className="max-w-3xl space-y-1">
+        <span className="text-[10px] uppercase font-bold text-neutral-500 tracking-wider">
+          // HARDWARE LISTING WIZARD
+        </span>
+        <h1 className="text-2xl sm:text-3xl font-bold text-black dark:text-white tracking-tight">
+          List a Hardware Component for Sale
         </h1>
-        <p className="text-xs sm:text-sm text-slate-300">
-          Sell to engineering students in your campus or across Pakistan. Fast, free, and protected.
+        <p className="text-xs text-neutral-600 dark:text-neutral-400">
+          Sell your extra microcontrollers, sensors, or FYP hardware components directly to other engineering students.
         </p>
       </div>
 
-      {publishSuccess ? (
-        <div className="max-w-md mx-auto p-8 bg-techlo-dark border border-emerald-500/40 rounded-3xl text-center space-y-4 shadow-2xl">
-          <CheckCircle2 className="w-16 h-16 text-emerald-400 mx-auto" />
-          <h2 className="text-2xl font-bold text-white">Listing Published!</h2>
-          <p className="text-sm text-slate-300">
-            Your hardware component is now live on the TECHLO marketplace. Redirecting to your listing...
-          </p>
-        </div>
-      ) : (
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Form Columns (7 cols) */}
-          <div className="lg:col-span-7 bg-techlo-dark border border-techlo-border rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl">
-            {/* Title */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300">
-                Component Title / Part Name <span className="text-techlo-cyan">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. STM32F401 BlackPill + ST-Link V2 Debugger"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-4 py-3 bg-techlo-surface border border-techlo-border rounded-xl text-white text-sm focus:border-techlo-cyan focus:outline-none"
-              />
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Form Column (7 cols) */}
+        <div className="lg:col-span-7">
+          <form
+            onSubmit={handleSubmit}
+            className="bg-white dark:bg-[#0a0a0a] border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 sm:p-8 space-y-6 shadow-sm text-xs"
+          >
+            {/* 1. Title & Category */}
+            <div className="space-y-4">
+              <h2 className="font-bold text-black dark:text-white uppercase text-xs">
+                1. Item Title & Category
+              </h2>
 
-            {/* Category & Quantity */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-300">Category</label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value as any)}
-                  className="w-full px-3.5 py-2.5 bg-techlo-surface border border-techlo-border rounded-xl text-white text-xs focus:border-techlo-cyan focus:outline-none"
-                >
-                  <option value="microcontrollers">Microcontrollers (ESP32/STM32/Arduino)</option>
-                  <option value="sensors">Sensors & IMU Modules</option>
-                  <option value="motors_actuators">Motors, Servos & Steppers</option>
-                  <option value="power_bms">LiPo Batteries & BMS</option>
-                  <option value="wireless_iot">Wireless, LoRa & IoT Modules</option>
-                  <option value="development_boards">Raspberry Pi, SBC & FPGAs</option>
-                  <option value="displays">Displays (LCD, OLED, TFT)</option>
-                  <option value="test_tools">Lab Tools & Logic Analyzers</option>
-                  <option value="passives_ics">ICs, Relays & Components</option>
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-300">Quantity Available</label>
+              <div className="space-y-1">
+                <label className="text-neutral-500 uppercase text-[10px]">
+                  Component Title *
+                </label>
                 <input
-                  type="number"
-                  min={1}
-                  max={50}
-                  value={quantity}
-                  onChange={(e) => setQuantity(Number(e.target.value))}
-                  className="w-full px-3.5 py-2.5 bg-techlo-surface border border-techlo-border rounded-xl text-white text-xs font-mono"
+                  type="text"
+                  required
+                  placeholder="e.g. ESP32-WROOM-32D Development Board (Type-C)"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full p-3 bg-neutral-50 dark:bg-[#121212] border border-neutral-200 dark:border-neutral-800 rounded-xl text-black dark:text-white font-mono focus:border-black dark:focus:border-white focus:outline-none"
                 />
               </div>
-            </div>
 
-            {/* Hardware Condition Selector */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-300">
-                Hardware Condition <span className="text-techlo-cyan">*</span>
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {[
-                  { id: "fyp_tested", name: "FYP Tested (100% Working)", desc: "Used in project, verified in lab" },
-                  { id: "brand_new", name: "Brand New (Unopened)", desc: "Sealed in anti-static bag" },
-                  { id: "gently_used", name: "Gently Used", desc: "Headers soldered, tested" },
-                  { id: "desoldered_working", name: "Desoldered / Working", desc: "Desoldered from board" },
-                  { id: "for_parts", name: "For Parts / Salvage", desc: "Non-functional or as-is" },
-                ].map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => setCondition(c.id as any)}
-                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                      condition === c.id
-                        ? "bg-techlo-cyan/15 border-techlo-cyan text-white shadow-glow-cyan"
-                        : "bg-techlo-surface border-techlo-border text-slate-300 hover:border-slate-500"
-                    }`}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-neutral-500 uppercase text-[10px]">Category *</label>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value as any)}
+                    className="w-full p-3 bg-neutral-50 dark:bg-[#121212] border border-neutral-200 dark:border-neutral-800 rounded-xl text-black dark:text-white"
                   >
-                    <div className="text-xs font-bold text-white">{c.name}</div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">{c.desc}</div>
-                  </button>
-                ))}
+                    <option value="microcontrollers">Microcontrollers (ESP32 / STM32 / PIC)</option>
+                    <option value="sensors">Sensors & IMUs</option>
+                    <option value="motors_actuators">Motors, Servos & Drivers</option>
+                    <option value="power_bms">Power, LiPo & BMS</option>
+                    <option value="wireless_iot">Wireless & LoRa</option>
+                    <option value="development_boards">Raspberry Pi & FPGAs</option>
+                    <option value="displays">Displays & OLEDs</option>
+                    <option value="test_tools">Lab Tools & Logic Analyzers</option>
+                    <option value="passives_ics">ICs & Passives</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-neutral-500 uppercase text-[10px]">Hardware Condition *</label>
+                  <select
+                    value={condition}
+                    onChange={(e) => setCondition(e.target.value as any)}
+                    className="w-full p-3 bg-neutral-50 dark:bg-[#121212] border border-neutral-200 dark:border-neutral-800 rounded-xl text-black dark:text-white"
+                  >
+                    <option value="brand_new">Brand New (Unopened in ESD Bag)</option>
+                    <option value="fyp_tested">FYP Tested & 100% Working</option>
+                    <option value="gently_used">Gently Used (Pins Intact)</option>
+                    <option value="desoldered_working">Desoldered / Tested Working</option>
+                    <option value="for_parts">For Parts / Salvage</option>
+                  </select>
+                </div>
               </div>
             </div>
 
-            {/* Pricing */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-300">
-                  Selling Price (PKR) <span className="text-techlo-cyan">*</span>
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-2.5 text-xs text-slate-400 font-mono">Rs.</span>
+            {/* 2. Pricing & Quantity */}
+            <div className="space-y-4 pt-4 border-t border-neutral-200 dark:border-neutral-800">
+              <h2 className="font-bold text-black dark:text-white uppercase text-xs">
+                2. Price & Quantity
+              </h2>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <label className="text-neutral-500 uppercase text-[10px]">Asking Price (PKR) *</label>
                   <input
                     type="number"
                     required
-                    placeholder="1500"
+                    placeholder="e.g. 1500"
                     value={pricePkr}
                     onChange={(e) => setPricePkr(e.target.value)}
-                    className="w-full pl-12 pr-4 py-2.5 bg-techlo-surface border border-techlo-border rounded-xl text-white font-mono text-sm focus:border-techlo-cyan focus:outline-none"
+                    className="w-full p-3 bg-neutral-50 dark:bg-[#121212] border border-neutral-200 dark:border-neutral-800 rounded-xl text-black dark:text-white font-bold"
                   />
                 </div>
-              </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-300">
-                  Original Retail Price (PKR) <span className="text-slate-500">(Optional)</span>
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-2.5 text-xs text-slate-400 font-mono">Rs.</span>
+                <div className="space-y-1">
+                  <label className="text-neutral-500 uppercase text-[10px]">Original Market Price (PKR)</label>
                   <input
                     type="number"
-                    placeholder="2500"
+                    placeholder="e.g. 2400"
                     value={originalPricePkr}
                     onChange={(e) => setOriginalPricePkr(e.target.value)}
-                    className="w-full pl-12 pr-4 py-2.5 bg-techlo-surface border border-techlo-border rounded-xl text-white font-mono text-sm focus:border-techlo-cyan focus:outline-none"
+                    className="w-full p-3 bg-neutral-50 dark:bg-[#121212] border border-neutral-200 dark:border-neutral-800 rounded-xl text-black dark:text-white"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-neutral-500 uppercase text-[10px]">Quantity Available</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={quantity}
+                    onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                    className="w-full p-3 bg-neutral-50 dark:bg-[#121212] border border-neutral-200 dark:border-neutral-800 rounded-xl text-black dark:text-white"
                   />
                 </div>
               </div>
-            </div>
 
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="nego"
-                checked={isNegotiable}
-                onChange={(e) => setIsNegotiable(e.target.checked)}
-                className="w-4 h-4 rounded text-techlo-cyan focus:ring-techlo-cyan bg-techlo-dark border-techlo-border accent-techlo-cyan"
-              />
-              <label htmlFor="nego" className="text-xs text-slate-300 cursor-pointer">
-                Price is slightly negotiable for students
+              <label className="flex items-center gap-2 cursor-pointer pt-1">
+                <input
+                  type="checkbox"
+                  checked={isNegotiable}
+                  onChange={(e) => setIsNegotiable(e.target.checked)}
+                  className="w-4 h-4 rounded text-black dark:text-white focus:ring-black accent-black dark:accent-white"
+                />
+                <span className="text-neutral-700 dark:text-neutral-300">
+                  Open to reasonable negotiation from university peers
+                </span>
               </label>
             </div>
 
-            {/* Photos Upload */}
-            <div className="space-y-3">
-              <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
-                <span>Photos of Hardware & Pins</span>
-                <span className="text-[11px] text-slate-400">({images.length} added)</span>
-              </label>
+            {/* 3. Description & Specs */}
+            <div className="space-y-4 pt-4 border-t border-neutral-200 dark:border-neutral-800">
+              <h2 className="font-bold text-black dark:text-white uppercase text-xs">
+                3. Technical Description & Specifications
+              </h2>
 
-              {/* Photos Grid */}
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                {images.map((img, idx) => (
-                  <div
-                    key={idx}
-                    className="relative aspect-square rounded-xl overflow-hidden bg-techlo-surface border border-techlo-border group"
+              <div className="space-y-1">
+                <label className="text-neutral-500 uppercase text-[10px]">
+                  Description & Usage History *
+                </label>
+                <textarea
+                  required
+                  rows={4}
+                  placeholder="Describe how long it was used, what project it was tested on, whether header pins are soldered, and what extra cables/accessories are included..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="w-full p-3 bg-neutral-50 dark:bg-[#121212] border border-neutral-200 dark:border-neutral-800 rounded-xl text-black dark:text-white font-mono"
+                />
+              </div>
+
+              {/* Dynamic Specs */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-neutral-500 uppercase text-[10px]">
+                    Technical Specs Key-Value Pairs
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleAddSpec}
+                    className="text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white font-bold flex items-center gap-1 cursor-pointer"
                   >
-                    <img src={img} alt="Product preview" className="w-full h-full object-cover" />
+                    <Plus className="w-3 h-3" /> Add Spec
+                  </button>
+                </div>
+
+                {specs.map((spec, idx) => (
+                  <div key={idx} className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="e.g. Flash Memory"
+                      value={spec.key}
+                      onChange={(e) => handleSpecChange(idx, "key", e.target.value)}
+                      className="flex-1 p-2 bg-neutral-50 dark:bg-[#121212] border border-neutral-200 dark:border-neutral-800 rounded-lg text-black dark:text-white"
+                    />
+                    <input
+                      type="text"
+                      placeholder="e.g. 4MB SPI Flash"
+                      value={spec.value}
+                      onChange={(e) => handleSpecChange(idx, "value", e.target.value)}
+                      className="flex-1 p-2 bg-neutral-50 dark:bg-[#121212] border border-neutral-200 dark:border-neutral-800 rounded-lg text-black dark:text-white"
+                    />
                     <button
                       type="button"
-                      onClick={() => setImages(images.filter((_, i) => i !== idx))}
-                      className="absolute top-1 right-1 p-1 rounded-md bg-black/70 text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => handleRemoveSpec(idx)}
+                      className="p-2 text-neutral-400 hover:text-rose-500"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 ))}
-
-                {/* Upload Button */}
-                <label className="aspect-square rounded-xl border-2 border-dashed border-techlo-border hover:border-techlo-cyan bg-techlo-surface/40 flex flex-col items-center justify-center text-slate-400 hover:text-techlo-cyan cursor-pointer transition-all">
-                  <Camera className="w-5 h-5 mb-1" />
-                  <span className="text-[10px] font-bold">Add Photo</span>
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                  />
-                </label>
               </div>
+            </div>
 
-              {/* Presets for quick demo testing */}
-              <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                <span className="text-[10px] text-slate-400">Sample Photos:</span>
-                {samplePhotoPresets.map((preset) => (
+            {/* 4. Campus Location */}
+            <div className="space-y-4 pt-4 border-t border-neutral-200 dark:border-neutral-800">
+              <h2 className="font-bold text-black dark:text-white uppercase text-xs">
+                4. Campus Pickup Location
+              </h2>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-neutral-500 uppercase text-[10px]">Campus Details *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. NUST SEECS / Hostel 9"
+                    value={campusLocation}
+                    onChange={(e) => setCampusLocation(e.target.value)}
+                    className="w-full p-3 bg-neutral-50 dark:bg-[#121212] border border-neutral-200 dark:border-neutral-800 rounded-xl text-black dark:text-white"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-neutral-500 uppercase text-[10px]">City *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Islamabad"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    className="w-full p-3 bg-neutral-50 dark:bg-[#121212] border border-neutral-200 dark:border-neutral-800 rounded-xl text-black dark:text-white"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 5. Photos */}
+            <div className="space-y-3 pt-4 border-t border-neutral-200 dark:border-neutral-800">
+              <h2 className="font-bold text-black dark:text-white uppercase text-xs">
+                5. Product Image Preset
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {samplePhotoPresets.map((preset, idx) => (
                   <button
-                    key={preset.label}
+                    key={idx}
                     type="button"
                     onClick={() => setImages([preset.url])}
-                    className="text-[10px] px-2 py-0.5 rounded bg-techlo-surface border border-techlo-border text-slate-300 hover:text-white"
+                    className={`p-2 rounded-xl border text-left cursor-pointer transition-all ${
+                      images[0] === preset.url
+                        ? "border-black dark:border-white bg-neutral-100 dark:bg-[#141414]"
+                        : "border-neutral-200 dark:border-neutral-800 hover:border-neutral-400"
+                    }`}
                   >
-                    + {preset.label}
+                    <img src={preset.url} alt={preset.label} className="w-full h-16 object-cover rounded-lg mb-1.5" />
+                    <span className="text-[10px] font-bold text-black dark:text-white block truncate">{preset.label}</span>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Description */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300">
-                Description & Working Verification <span className="text-techlo-cyan">*</span>
-              </label>
-              <textarea
-                required
-                rows={4}
-                placeholder="Mention how long it was used, why you are selling it, what project it was tested on, and any cables/extras included..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-4 py-2.5 bg-techlo-surface border border-techlo-border rounded-xl text-white text-xs placeholder-slate-500 focus:border-techlo-cyan focus:outline-none"
-              />
-            </div>
-
-            {/* Campus & Location */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-300">Campus Pickup Location</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. NUST H-12 Campus or FAST Lahore"
-                  value={campusLocation}
-                  onChange={(e) => setCampusLocation(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-techlo-surface border border-techlo-border rounded-xl text-white text-xs"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-300">City</label>
-                <select
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-techlo-surface border border-techlo-border rounded-xl text-white text-xs"
-                >
-                  {["Islamabad", "Rawalpindi", "Lahore", "Karachi", "Peshawar", "Topi", "Taxila", "Quetta"].map((c) => (
-                    <option key={c} value={c} className="bg-techlo-dark">
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
             {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full py-4 bg-gradient-to-r from-techlo-cyan to-blue-600 hover:from-techlo-sky hover:to-blue-500 text-white font-bold text-sm rounded-2xl shadow-glow-cyan transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              {isSubmitting ? (
-                <span>Publishing to Campus Feed...</span>
-              ) : (
-                <>
-                  <Sparkles className="w-5 h-5" />
-                  <span>Publish Hardware Listing (Free)</span>
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* Right Live Preview (5 cols) */}
-          <div className="lg:col-span-5 space-y-4 sticky top-28">
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-300">
-              <Eye className="w-4 h-4 text-techlo-cyan" />
-              <span>Live Listing Card Preview</span>
+            <div className="pt-4">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-3.5 bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black font-bold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <span>Publishing Listing...</span>
+                ) : publishSuccess ? (
+                  <span>Listing Published Successfully!</span>
+                ) : (
+                  <>
+                    <span>Publish Hardware Listing</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
             </div>
+          </form>
+        </div>
 
-            {/* Preview Box */}
-            <div className="p-4 bg-techlo-surface/50 border border-techlo-border rounded-3xl space-y-4">
-              <div className="max-w-sm mx-auto">
-                <div className="bg-techlo-dark border border-techlo-border rounded-2xl overflow-hidden shadow-2xl space-y-3">
-                  <div className="relative aspect-[4/3] bg-techlo-surface">
-                    <img
-                      src={images[0] || samplePhotoPresets[0].url}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute top-2.5 left-2.5">
-                      <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold border backdrop-blur-md shadow-sm ${conditionDetails.badgeClass}`}
-                      >
-                        {conditionDetails.label}
-                      </span>
-                    </div>
+        {/* Live Preview Card (5 cols) */}
+        <div className="lg:col-span-5 space-y-4">
+          <div className="sticky top-24">
+            <span className="text-[10px] uppercase font-bold text-neutral-500 tracking-wider block mb-2">
+              // LIVE BUYER PREVIEW
+            </span>
 
-                    <div className="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded-lg bg-techlo-dark/95 border border-techlo-border text-white">
-                      <span className="font-mono font-black text-sm text-techlo-sky">
-                        {pricePkr ? formatPKR(Number(pricePkr)) : "Rs. 0"}
-                      </span>
-                      {isNegotiable && (
-                        <span className="text-[10px] text-slate-400 ml-1.5">(Negotiable)</span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="p-4 space-y-2">
-                    <span className="text-[10px] font-bold text-techlo-cyan uppercase tracking-wider">
-                      {category}
-                    </span>
-                    <h3 className="font-bold text-white text-sm line-clamp-2">
-                      {title || "Untitled Hardware Component"}
-                    </h3>
-                    <p className="text-xs text-slate-400 line-clamp-2">
-                      {description || "No description entered yet."}
-                    </p>
-                    <div className="pt-2 border-t border-techlo-border/60 flex items-center justify-between text-xs text-slate-300">
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-3.5 h-3.5 text-techlo-cyan" />
-                        {campusLocation}
-                      </span>
-                      <span className="text-emerald-400 font-semibold">✓ Verified Seller</span>
-                    </div>
-                  </div>
+            <div className="p-4 bg-white dark:bg-[#0a0a0a] border border-neutral-200 dark:border-neutral-800 rounded-2xl space-y-3 shadow-sm">
+              <div className="aspect-[4/3] rounded-xl overflow-hidden bg-neutral-100 dark:bg-[#121212] relative">
+                <img
+                  src={images[0]}
+                  alt="Preview"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute top-2.5 left-2.5">
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${conditionInfo.badgeClass}`}>
+                    {conditionInfo.label}
+                  </span>
                 </div>
               </div>
+
+              <div>
+                <span className="text-[10px] uppercase text-neutral-500 block">{category}</span>
+                <h3 className="font-bold text-black dark:text-white text-sm line-clamp-2 mt-0.5">
+                  {title || "Component Title Preview"}
+                </h3>
+              </div>
+
+              <div className="flex items-baseline gap-2 pt-2 border-t border-neutral-200 dark:border-neutral-800">
+                <span className="text-xl font-bold text-black dark:text-white">
+                  {formatPKR(parseFloat(pricePkr) || 0)}
+                </span>
+                {originalPricePkr && (
+                  <span className="text-xs text-neutral-400 line-through">
+                    {formatPKR(parseFloat(originalPricePkr))}
+                  </span>
+                )}
+              </div>
+
+              <div className="pt-2 text-[11px] text-neutral-500 flex items-center gap-1">
+                <MapPin className="w-3 h-3" />
+                <span>{campusLocation || "Campus Pickup"}</span>
+              </div>
             </div>
           </div>
-        </form>
-      )}
+        </div>
+      </div>
     </div>
   );
 }
