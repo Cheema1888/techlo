@@ -4,7 +4,7 @@ interface TechloLogoProps {
   className?: string;
   size?: "sm" | "md" | "lg" | "xl";
   showTagline?: boolean;
-  variant?: "color" | "monochrome" | "light";
+  variant?: "monochrome" | "white" | "dark";
   iconOnly?: boolean;
 }
 
@@ -12,21 +12,20 @@ export const TechloLogo: React.FC<TechloLogoProps> = ({
   className = "",
   size = "md",
   showTagline = true,
-  variant = "color",
+  variant = "white",
   iconOnly = false,
 }) => {
-  // Dimensions
   const heightMap = {
-    sm: iconOnly ? 28 : 28,
-    md: iconOnly ? 38 : 38,
-    lg: iconOnly ? 48 : 48,
-    xl: iconOnly ? 64 : 64,
+    sm: iconOnly ? 26 : 26,
+    md: iconOnly ? 34 : 34,
+    lg: iconOnly ? 44 : 44,
+    xl: iconOnly ? 56 : 56,
   };
 
   const currentHeight = heightMap[size];
 
-  // Robot Icon Component
-  const RobotIcon = ({ s = 36 }: { s?: number }) => (
+  // Robot Icon Component in Clean Monochrome
+  const RobotIcon = ({ s = 34 }: { s?: number }) => (
     <svg
       width={s}
       height={s}
@@ -35,35 +34,11 @@ export const TechloLogo: React.FC<TechloLogoProps> = ({
       xmlns="http://www.w3.org/2000/svg"
       className="inline-block flex-shrink-0 align-middle"
     >
-      <defs>
-        <linearGradient id="techloRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#00E5FF" />
-          <stop offset="50%" stopColor="#00A8FF" />
-          <stop offset="100%" stopColor="#0066FF" />
-        </linearGradient>
-        <radialGradient id="techloGlow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#00A8FF" stopOpacity="0.4" />
-          <stop offset="100%" stopColor="#00A8FF" stopOpacity="0" />
-        </radialGradient>
-      </defs>
-
-      {/* Outer Cyan Ring */}
-      {variant === "monochrome" ? (
-        <circle cx="50" cy="50" r="46" fill="#0A1931" />
-      ) : (
-        <>
-          <circle cx="50" cy="50" r="49" fill="url(#techloGlow)" />
-          <circle cx="50" cy="50" r="45" fill="url(#techloRingGrad)" />
-        </>
-      )}
+      {/* Outer Ring */}
+      <circle cx="50" cy="50" r="46" fill="#FFFFFF" />
 
       {/* Inner Screen Bezel */}
-      <circle
-        cx="50"
-        cy="50"
-        r="37"
-        fill={variant === "monochrome" ? "#FFFFFF" : "#081325"}
-      />
+      <circle cx="50" cy="50" r="37" fill="#0A0A0A" />
 
       {/* Robot Face Screen Container */}
       <rect
@@ -71,32 +46,20 @@ export const TechloLogo: React.FC<TechloLogoProps> = ({
         y="26"
         width="56"
         height="48"
-        rx="14"
-        fill={variant === "monochrome" ? "#0A1931" : "#0A1B30"}
+        rx="12"
+        fill="#141414"
+        stroke="#262626"
+        strokeWidth="2"
       />
 
       {/* Robot Eyes (Pixel / Square Style) */}
-      <rect
-        x="32"
-        y="40"
-        width="11"
-        height="11"
-        rx="2"
-        fill={variant === "monochrome" ? "#FFFFFF" : "#FFFFFF"}
-      />
-      <rect
-        x="57"
-        y="40"
-        width="11"
-        height="11"
-        rx="2"
-        fill={variant === "monochrome" ? "#FFFFFF" : "#FFFFFF"}
-      />
+      <rect x="32" y="40" width="11" height="11" rx="2" fill="#FFFFFF" />
+      <rect x="57" y="40" width="11" height="11" rx="2" fill="#FFFFFF" />
 
       {/* Cute Smile */}
       <path
         d="M44 60 C47 63, 53 63, 56 60"
-        stroke={variant === "monochrome" ? "#FFFFFF" : "#FFFFFF"}
+        stroke="#FFFFFF"
         strokeWidth="3.5"
         strokeLinecap="round"
       />
@@ -107,35 +70,24 @@ export const TechloLogo: React.FC<TechloLogoProps> = ({
     return <RobotIcon s={currentHeight} />;
   }
 
-  const textColor =
-    variant === "monochrome"
-      ? "text-techlo-navy"
-      : variant === "light"
-      ? "text-white"
-      : "text-techlo-navy dark:text-white";
-
-  const taglineColor =
-    variant === "monochrome"
-      ? "text-techlo-navy/70"
-      : variant === "light"
-      ? "text-techlo-cyan"
-      : "text-techlo-cyan dark:text-techlo-sky";
+  const textColor = variant === "dark" ? "text-black" : "text-white";
+  const taglineColor = variant === "dark" ? "text-neutral-600" : "text-neutral-400";
 
   return (
     <div className={`inline-flex flex-col items-start select-none ${className}`}>
       <div className="flex items-center gap-1">
         <span
-          className={`font-display font-black tracking-tight leading-none ${textColor}`}
+          className={`font-mono font-black tracking-tighter leading-none ${textColor}`}
           style={{
             fontSize:
               size === "sm"
-                ? "1.35rem"
+                ? "1.3rem"
                 : size === "md"
-                ? "1.75rem"
+                ? "1.65rem"
                 : size === "lg"
-                ? "2.35rem"
-                : "3.2rem",
-            letterSpacing: "-0.04em",
+                ? "2.2rem"
+                : "3rem",
+            letterSpacing: "-0.05em",
           }}
         >
           TECHL
@@ -153,34 +105,34 @@ export const TechloLogo: React.FC<TechloLogoProps> = ({
           <RobotIcon
             s={
               size === "sm"
-                ? 24
+                ? 22
                 : size === "md"
-                ? 30
+                ? 28
                 : size === "lg"
-                ? 38
-                : 50
+                ? 36
+                : 48
             }
           />
         </div>
       </div>
       {showTagline && (
         <span
-          className={`font-sans tracking-wide font-medium leading-none ${taglineColor}`}
+          className={`font-mono tracking-widest leading-none ${taglineColor}`}
           style={{
             fontSize:
               size === "sm"
                 ? "0.55rem"
                 : size === "md"
-                ? "0.68rem"
+                ? "0.64rem"
                 : size === "lg"
-                ? "0.85rem"
-                : "1.1rem",
-            letterSpacing: "0.06em",
+                ? "0.8rem"
+                : "1rem",
+            letterSpacing: "0.12em",
             marginTop: size === "sm" ? "2px" : "3px",
             alignSelf: "flex-end",
           }}
         >
-          a product of <span className="font-bold">arix</span>
+          a product of <span className="font-bold text-white">arix</span>
         </span>
       )}
     </div>

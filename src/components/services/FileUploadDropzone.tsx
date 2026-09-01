@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { UploadCloud, File, X, CheckCircle2, AlertCircle } from "lucide-react";
+import { UploadCloud, X, FileText } from "lucide-react";
 
 interface UploadedFileItem {
   id: string;
@@ -70,17 +70,17 @@ export const FileUploadDropzone: React.FC<FileUploadDropzoneProps> = ({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 font-mono">
       {/* Drop Area */}
       <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all ${
+        className={`border border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
           isDragging
-            ? "border-techlo-cyan bg-techlo-cyan/10 shadow-glow-cyan"
-            : "border-techlo-border hover:border-techlo-cyan/50 bg-techlo-surface/40 hover:bg-techlo-surface/70"
+            ? "border-white bg-neutral-900"
+            : "border-neutral-800 hover:border-neutral-600 bg-[#0c0c0c]"
         }`}
       >
         <input
@@ -93,37 +93,35 @@ export const FileUploadDropzone: React.FC<FileUploadDropzoneProps> = ({
         />
 
         <div className="flex flex-col items-center gap-2">
-          <div className="w-12 h-12 rounded-2xl bg-techlo-surface border border-techlo-border flex items-center justify-center text-techlo-cyan shadow-sm">
-            <UploadCloud className="w-6 h-6" />
-          </div>
-          <p className="text-sm font-bold text-white">
-            Drag & drop project files here, or <span className="text-techlo-cyan">Browse</span>
+          <UploadCloud className="w-6 h-6 text-neutral-400" />
+          <p className="text-xs font-semibold text-white">
+            Drag & drop files or <span className="underline">browse</span>
           </p>
-          <p className="text-xs text-slate-400">
-            Supports Gerber Archive (.zip), 3D CAD (.stl, .step), KiCad & Schematics (.pdf) up to 50MB
+          <p className="text-[11px] text-neutral-500">
+            Gerbers (.zip), CAD (.step, .stl), Schematics (.pdf) up to 50MB
           </p>
         </div>
       </div>
 
       {/* File List */}
       {files.length > 0 && (
-        <div className="space-y-2">
-          <span className="text-xs font-bold text-slate-300 block">
+        <div className="space-y-1.5">
+          <span className="text-[11px] text-neutral-400 block uppercase">
             Attached Files ({files.length})
           </span>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {files.map((file) => (
               <div
                 key={file.id}
-                className="flex items-center justify-between p-2.5 rounded-xl bg-techlo-surface border border-techlo-border text-xs"
+                className="flex items-center justify-between p-2.5 rounded-lg bg-[#111111] border border-neutral-800 text-xs"
               >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="px-2 py-1 bg-techlo-cyan/20 text-techlo-cyan rounded font-mono font-bold text-[10px]">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="px-1.5 py-0.5 bg-white text-black rounded text-[9px] font-bold">
                     {file.type}
-                  </div>
+                  </span>
                   <div className="truncate">
-                    <p className="font-semibold text-white truncate">{file.name}</p>
-                    <p className="text-[10px] text-slate-400">{file.size}</p>
+                    <p className="text-white truncate font-medium text-xs">{file.name}</p>
+                    <p className="text-[10px] text-neutral-500">{file.size}</p>
                   </div>
                 </div>
                 <button
@@ -132,9 +130,9 @@ export const FileUploadDropzone: React.FC<FileUploadDropzoneProps> = ({
                     e.stopPropagation();
                     removeFile(file.id);
                   }}
-                  className="p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 cursor-pointer"
+                  className="p-1 text-neutral-500 hover:text-white"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
               </div>
             ))}

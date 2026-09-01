@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/authContext";
-import { ShieldCheck, Smartphone, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
+import { ShieldCheck, Smartphone, RefreshCw, Check, AlertCircle } from "lucide-react";
 
 export const PhoneOtpModal: React.FC = () => {
   const {
@@ -39,12 +39,10 @@ export const PhoneOtpModal: React.FC = () => {
     setDigits(newDigits);
     setError("");
 
-    // Auto focus next input
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
 
-    // Auto submit if all 6 digits entered
     if (newDigits.every((d) => d !== "") && index === 5) {
       handleVerify(newDigits.join(""));
     }
@@ -69,7 +67,7 @@ export const PhoneOtpModal: React.FC = () => {
   const handleVerify = (codeToVerify?: string) => {
     const code = codeToVerify || digits.join("");
     if (code.length < 6) {
-      setError("Please enter the complete 6-digit verification code");
+      setError("Please enter the complete 6-digit code");
       return;
     }
 
@@ -80,9 +78,9 @@ export const PhoneOtpModal: React.FC = () => {
       const success = verifyOtp(code);
       setIsVerifying(false);
       if (!success) {
-        setError("Invalid OTP code. Please check the SMS or use the demo code.");
+        setError("Invalid OTP code. Use the demo code.");
       }
-    }, 600);
+    }, 500);
   };
 
   const handleResend = () => {
@@ -95,34 +93,24 @@ export const PhoneOtpModal: React.FC = () => {
   };
 
   return (
-    <div className="p-6 md:p-8 space-y-6">
+    <div className="p-6 md:p-8 space-y-6 font-mono">
       {/* Header */}
-      <div className="text-center space-y-2">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-techlo-cyan/10 border border-techlo-cyan/30 text-techlo-cyan mb-1 shadow-glow-cyan">
-          <Smartphone className="w-7 h-7" />
+      <div className="text-center space-y-1.5">
+        <div className="w-12 h-12 rounded-xl bg-neutral-900 border border-neutral-800 text-white flex items-center justify-center mx-auto mb-2">
+          <Smartphone className="w-6 h-6" />
         </div>
-        <h3 className="text-2xl font-bold text-white tracking-tight">Verify Your Phone Number</h3>
-        <p className="text-sm text-slate-300">
-          We sent a 6-digit security code via SMS to{" "}
-          <span className="font-semibold text-techlo-cyan">{phoneNumber}</span>
+        <h3 className="text-xl font-bold text-white tracking-tight">Verify Phone Number</h3>
+        <p className="text-xs text-neutral-400">
+          6-digit verification code sent to <span className="text-white font-bold">{phoneNumber}</span>
         </p>
       </div>
 
       {/* Demo Notification Banner */}
-      <div className="p-3.5 rounded-xl bg-techlo-navy/80 border border-techlo-cyan/40 flex items-start gap-3 text-xs">
-        <ShieldCheck className="w-5 h-5 text-techlo-cyan flex-shrink-0 mt-0.5" />
-        <div>
-          <span className="font-semibold text-techlo-sky block mb-0.5">
-            [Live SMS Simulator] Techlo Security
-          </span>
-          <p className="text-slate-300">
-            Your instant verification code is:{" "}
-            <span className="font-mono font-bold text-white px-1.5 py-0.5 bg-techlo-cyan/20 rounded border border-techlo-cyan/40 text-sm">
-              {generatedOtp || "742918"}
-            </span>{" "}
-            (or enter <code className="text-techlo-sky">123456</code>)
-          </p>
-        </div>
+      <div className="p-3 rounded-xl bg-[#111111] border border-neutral-800 text-xs">
+        <span className="text-neutral-400 block mb-0.5">// LIVE SMS SIMULATOR</span>
+        <p className="text-neutral-300">
+          Security code: <strong className="text-white px-1.5 py-0.5 bg-neutral-800 rounded">{generatedOtp || "742918"}</strong> (or enter <code className="text-white">123456</code>)
+        </p>
       </div>
 
       {/* 6 Digit Inputs */}
@@ -140,14 +128,14 @@ export const PhoneOtpModal: React.FC = () => {
               value={digit}
               onChange={(e) => handleChange(idx, e.target.value)}
               onKeyDown={(e) => handleKeyDown(idx, e)}
-              className="w-12 h-14 text-center font-mono text-2xl font-bold text-white bg-techlo-surface border-2 border-techlo-border rounded-xl focus:border-techlo-cyan focus:ring-2 focus:ring-techlo-cyan/20 focus:outline-none transition-all"
+              className="w-11 h-13 text-center font-mono text-xl font-bold text-white bg-[#121212] border border-neutral-800 focus:border-white rounded-xl focus:outline-none transition-all"
             />
           ))}
         </div>
 
         {error && (
           <div className="flex items-center justify-center gap-1.5 text-xs text-rose-400 font-medium">
-            <AlertCircle className="w-4 h-4" />
+            <AlertCircle className="w-3.5 h-3.5" />
             <span>{error}</span>
           </div>
         )}
@@ -157,41 +145,40 @@ export const PhoneOtpModal: React.FC = () => {
       <button
         onClick={() => handleVerify()}
         disabled={isVerifying || digits.some((d) => d === "")}
-        className="w-full py-3.5 px-4 bg-gradient-to-r from-techlo-cyan to-blue-600 hover:from-techlo-sky hover:to-blue-500 text-white font-semibold rounded-xl shadow-glow-cyan transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        className="w-full py-3 bg-white hover:bg-neutral-200 text-black font-bold text-xs rounded-xl shadow-mono-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
       >
         {isVerifying ? (
           <>
-            <RefreshCw className="w-5 h-5 animate-spin" />
-            Verifying Code...
+            <RefreshCw className="w-4 h-4 animate-spin" />
+            Verifying...
           </>
         ) : (
           <>
-            <CheckCircle2 className="w-5 h-5" />
-            Confirm & Access TECHLO
+            <Check className="w-4 h-4 stroke-[3]" />
+            Confirm Phone Number
           </>
         )}
       </button>
 
       {/* Resend Timer */}
-      <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-techlo-border/60">
+      <div className="flex items-center justify-between text-xs text-neutral-400 pt-2 border-t border-neutral-800">
         <button
           onClick={() => setAuthModalView("signup")}
-          className="hover:text-white transition-colors cursor-pointer"
+          className="hover:text-white cursor-pointer"
         >
-          Change Phone Number
+          Change Number
         </button>
 
         {canResend ? (
           <button
             onClick={handleResend}
-            className="text-techlo-cyan hover:text-techlo-sky font-semibold flex items-center gap-1 cursor-pointer"
+            className="text-white hover:underline font-bold cursor-pointer"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
             Resend SMS OTP
           </button>
         ) : (
           <span>
-            Resend code in <strong className="text-white font-mono">{timer}s</strong>
+            Resend in <strong className="text-white">{timer}s</strong>
           </span>
         )}
       </div>

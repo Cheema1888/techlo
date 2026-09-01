@@ -19,37 +19,37 @@ export function getConditionBadge(condition: HardwareCondition): {
     case "brand_new":
       return {
         label: "Brand New (Unopened)",
-        badgeClass: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
+        badgeClass: "bg-white text-black border border-white font-semibold",
         description: "Sealed in original anti-static bag, pins pristine.",
       };
     case "fyp_tested":
       return {
-        label: "FYP Tested (100% Working)",
-        badgeClass: "bg-techlo-cyan/15 text-techlo-cyan border-techlo-cyan/40",
-        description: "Used in a final year project and tested working before listing.",
+        label: "Tested (100% Functional)",
+        badgeClass: "bg-neutral-900 text-white border border-neutral-700 font-semibold",
+        description: "Tested and verified in lab with full working status.",
       };
     case "gently_used":
       return {
         label: "Gently Used",
-        badgeClass: "bg-sky-500/10 text-sky-400 border-sky-500/30",
-        description: "Used in lab experiments, headers soldered, fully functional.",
+        badgeClass: "bg-neutral-900 text-neutral-300 border border-neutral-800",
+        description: "Minor lab use, headers soldered, fully functional.",
       };
     case "desoldered_working":
       return {
-        label: "Desoldered / Working",
-        badgeClass: "bg-amber-500/10 text-amber-400 border-amber-500/30",
-        description: "Carefully desoldered from demo board, tested working.",
+        label: "Desoldered / Tested",
+        badgeClass: "bg-neutral-900 text-neutral-400 border border-neutral-800",
+        description: "Desoldered from dev board, pin-tested working.",
       };
     case "for_parts":
       return {
         label: "For Parts / Salvage",
-        badgeClass: "bg-rose-500/10 text-rose-400 border-rose-500/30",
-        description: "Not fully functional or sold as-is for salvageable components.",
+        badgeClass: "bg-neutral-900 text-neutral-500 border border-neutral-800 line-through",
+        description: "Sold as-is for salvageable passives/ICs.",
       };
     default:
       return {
         label: condition,
-        badgeClass: "bg-slate-500/10 text-slate-400 border-slate-500/30",
+        badgeClass: "bg-neutral-900 text-neutral-300 border border-neutral-800",
         description: "",
       };
   }
@@ -57,16 +57,16 @@ export function getConditionBadge(condition: HardwareCondition): {
 
 export function getCategoryLabel(category: ComponentCategory): string {
   const map: Record<ComponentCategory, string> = {
-    microcontrollers: "Microcontrollers & Dev Boards",
+    microcontrollers: "Microcontrollers (ESP32 / STM32)",
     sensors: "Sensors & Modules",
-    motors_actuators: "Motors, Servos & Drivers",
-    power_bms: "Power Supplies, LiPo & BMS",
-    wireless_iot: "Wireless, LoRa & IoT",
-    displays: "Displays, LCD & OLED",
-    test_tools: "Lab Tools & Soldering",
-    passives_ics: "ICs, Relays & Passives",
-    robotics_chassis: "Robotics Chassis & Mechanical",
-    development_boards: "FPGA & SBCs",
+    motors_actuators: "Motors & Actuators",
+    power_bms: "Power & LiPo BMS",
+    wireless_iot: "Wireless & IoT",
+    displays: "Displays & OLEDs",
+    test_tools: "Lab Tools & Debuggers",
+    passives_ics: "ICs & Components",
+    robotics_chassis: "Robotics & Hardware",
+    development_boards: "SBCs & FPGAs",
   };
   return map[category] || category;
 }
