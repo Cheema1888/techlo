@@ -247,9 +247,25 @@ export const AuthModal: React.FC = () => {
             {authModalView === "login" ? (
               <form onSubmit={handleLogin} className="p-6 space-y-3.5 text-xs">
                 {loginError && (
-                  <div className="p-2.5 bg-rose-50 dark:bg-rose-950/30 border border-rose-200/80 dark:border-rose-900/80 rounded-2xl text-rose-600 dark:text-rose-400 text-[11px] flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                    <span>{loginError}</span>
+                  <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-2xl text-rose-700 dark:text-rose-300 text-xs space-y-2">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                      <span>{loginError}</span>
+                    </div>
+                    {loginError.toLowerCase().includes("register") && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPhoneNumber(loginPhone);
+                          setSelectedUniversity(loginUniversity);
+                          setAuthModalView("signup");
+                          setLoginError("");
+                        }}
+                        className="w-full py-1.5 px-3 bg-black dark:bg-white text-white dark:text-black rounded-full font-semibold text-[11px] hover:opacity-90 transition-opacity cursor-pointer flex items-center justify-center gap-1.5"
+                      >
+                        <span>Create Account with {loginPhone || "this phone"} →</span>
+                      </button>
+                    )}
                   </div>
                 )}
 

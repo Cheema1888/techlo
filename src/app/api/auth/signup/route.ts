@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { generateSecureOtp, dispatchSmsOtp } from "@/lib/smsGateway";
 
 export async function POST(req: NextRequest) {
   try {
@@ -25,11 +26,11 @@ export async function POST(req: NextRequest) {
       ? email.toLowerCase().trim() 
       : `${cleanPhone.replace(/\D/g, "")}@student.pk`;
 
-    // Generate 6-digit OTP code
-    const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate cryptographically secure 6-digit OTP code
+    const generatedOtp = generateSecureOtp();
     const otpExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
 
-    // Upsert or register real student user in SQLite
+    // Upsert or register real student user in SQLite database
     const user = await prisma.user.upsert({
       where: { phoneNumber: cleanPhone },
       update: {
@@ -60,7 +61,8 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    console.log(`[SMS AUTH GATEWAY] Dispatched OTP ${generatedOtp} to ${cleanPhone} for ${fullName} (${university})`);
+    // Dispatch SMS via configured gateway (Twilio, BrandSMS, or local dev)
+    await dispatchSmsOtp(cleanPhone, generatedOtp, "registration");
 
     return NextResponse.json({
       success: true,
@@ -69,7 +71,7 @@ export async function POST(req: NextRequest) {
         userId: user.id,
         phoneNumber: cleanPhone,
         university: user.university,
-        otpCode: generatedOtp, // returned for live simulation in dev/demo
+        otpCode: generatedOtp, // returned for developer convenience in local dev
       },
     });
   } catch (error: any) {

@@ -125,10 +125,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await refreshData();
         return true;
       }
-      return false;
-    } catch (e) {
+
+      throw new Error(json.error || "Authentication failed");
+    } catch (e: any) {
       console.error("Login error:", e);
-      return false;
+      throw e;
     }
   };
 

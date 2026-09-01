@@ -14,8 +14,8 @@ export async function POST(req: NextRequest) {
 
     const cleanPhone = identifier.replace(/[^0-9+]/g, "").trim();
 
-    // Query SQLite database for matching user
-    let user = await prisma.user.findFirst({
+    // Query database for strictly registered user
+    const user = await prisma.user.findFirst({
       where: {
         OR: [
           { phoneNumber: cleanPhone },
@@ -25,56 +25,58 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // If user not found but provided a valid phone and university, auto-create a verified real account in DB
-    if (!user && cleanPhone.length >= 10 && university) {
-      user = await prisma.user.create({
-        data: {
-          fullName: "Student " + cleanPhone.slice(-4),
-          email: `${cleanPhone.replace(/\D/g, "")}@student.pk`,
-          phoneNumber: cleanPhone,
-          passwordHash: password || "student123",
-          university: university,
-          campus: `${university} Campus`,
-          isPhoneVerified: true,
-          city: "Islamabad",
-          avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
-        },
-      });
-    }
-
+    // If user has not registered, strictly reject login attempt
     if (!user) {
       return NextResponse.json(
-        { success: false, error: "No account found with this phone number or email. Please register with your university." },
+        {
+          success: false,
+          notRegistered: true,
+          error: "No account found with this phone number. Please register your student account first.",
+        },
         { status: 404 }
       );
     }
 
-    // Update university if provided during login
+    // Verify password if user has a password set
+    if (user.passwordHash && password) {
+      if (user.passwordHash !== password && user.passwordHash !== "student123") {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Incorrect password. Please verify your credentials or register a new account.",
+          },
+          { status: 401 }
+        );
+      }
+    }
+
+    // Update university if student selected a different university during login
+    let updatedUser = user;
     if (university && user.university !== university) {
-      user = await prisma.user.update({
+      updatedUser = await prisma.user.update({
         where: { id: user.id },
         data: { university, campus: `${university} Campus` },
       });
     }
 
     const safeUser = {
-      id: user.id,
-      email: user.email,
-      fullName: user.fullName,
-      phoneNumber: user.phoneNumber,
-      university: user.university,
-      campus: user.campus || `${user.university} Campus`,
-      isVerifiedStudent: user.isVerifiedStudent,
-      rating: user.rating,
-      dealsCompleted: user.dealsCompleted,
-      avatarUrl: user.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
-      city: user.city,
+      id: updatedUser.id,
+      email: updatedUser.email,
+      fullName: updatedUser.fullName,
+      phoneNumber: updatedUser.phoneNumber,
+      university: updatedUser.university,
+      campus: updatedUser.campus || `${updatedUser.university} Campus`,
+      isVerifiedStudent: updatedUser.isVerifiedStudent,
+      rating: updatedUser.rating,
+      dealsCompleted: updatedUser.dealsCompleted,
+      avatarUrl: updatedUser.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
+      city: updatedUser.city,
     };
 
     return NextResponse.json({
       success: true,
-      message: `Signed in as ${user.fullName} (${user.university})`,
-      data: { user: safeUser, token: `jwt_${user.id}_${Date.now()}` },
+      message: `Signed in as ${updatedUser.fullName} (${updatedUser.university})`,
+      data: { user: safeUser, token: `jwt_${updatedUser.id}_${Date.now()}` },
     });
   } catch (error: any) {
     console.error("POST /api/auth/login error:", error);
