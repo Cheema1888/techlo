@@ -27,24 +27,24 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const sellerName = product.seller?.name || product.seller?.fullName || "Seller";
   const cleanPhone = rawPhone.replace(/[^0-9]/g, "");
   const whatsappMessage = encodeURIComponent(
-    `Assalam-o-Alaikum ${sellerName}! I saw your listing for "${product.title}" on TECHLO (Rs. ${product.pricePkr.toLocaleString()}). Is it still available for campus pickup?`
+    `Assalam-o-Alaikum ${sellerName}! I saw your listing for "${product.title}" on TECHLO (${formatPKR(product.pricePkr)}). Is it still available for campus pickup?`
   );
   const whatsappUrl = `https://wa.me/${cleanPhone}?text=${whatsappMessage}`;
 
   return (
-    <div className="group relative flex flex-col bg-white dark:bg-[#0a0a0a] hover:bg-neutral-50 dark:hover:bg-[#0e0e0e] border border-neutral-200 dark:border-neutral-800 hover:border-black dark:hover:border-neutral-600 rounded-2xl overflow-hidden transition-all duration-200 shadow-sm hover:shadow-md font-mono">
+    <div className="group relative flex flex-col bg-white dark:bg-[#121215] border border-neutral-200/80 dark:border-neutral-800/80 hover:border-neutral-400 dark:hover:border-neutral-600 rounded-2xl overflow-hidden transition-all duration-200 shadow-xs hover:shadow-md">
       {/* Product Image Container */}
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-neutral-100 dark:bg-[#141414]">
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-neutral-100 dark:bg-neutral-900">
         <img
           src={product.images[0] || "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80"}
           alt={product.title}
-          className="w-full h-full object-cover object-center group-hover:scale-105 transition-all duration-500"
+          className="w-full h-full object-cover object-center group-hover:scale-102 transition-transform duration-300"
         />
 
         {/* Condition Tag Badge */}
-        <div className="absolute top-2.5 left-2.5 z-10">
+        <div className="absolute top-3 left-3 z-10">
           <span
-            className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] tracking-tight ${conditionInfo.badgeClass}`}
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-medium tracking-tight shadow-xs ${conditionInfo.badgeClass}`}
           >
             {conditionInfo.label}
           </span>
@@ -56,7 +56,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             e.preventDefault();
             toggleSaveProduct(product.id);
           }}
-          className={`absolute top-2.5 right-2.5 z-10 p-1.5 rounded-lg backdrop-blur-md transition-all cursor-pointer ${
+          className={`absolute top-3 right-3 z-10 p-2 rounded-full backdrop-blur-md transition-all cursor-pointer shadow-xs ${
             isSaved
               ? "bg-black text-white dark:bg-white dark:text-black"
               : "bg-white/80 dark:bg-black/60 text-black dark:text-white hover:bg-white dark:hover:bg-black"
@@ -66,18 +66,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </button>
 
         {/* Price Tag Overlay */}
-        <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-end justify-between">
-          <div className="px-2 py-0.5 rounded bg-white/95 dark:bg-black/90 border border-neutral-200 dark:border-neutral-800 text-black dark:text-white font-bold text-xs shadow-sm">
+        <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
+          <div className="px-2.5 py-1 rounded-lg bg-white/95 dark:bg-[#18181b]/95 backdrop-blur-md border border-neutral-200/80 dark:border-neutral-800/80 text-black dark:text-white font-semibold text-xs shadow-xs">
             {formatPKR(product.pricePkr)}
             {product.isNegotiable && (
-              <span className="text-[9px] text-neutral-500 dark:text-neutral-400 font-normal ml-1">
+              <span className="text-[10px] text-neutral-500 dark:text-neutral-400 font-normal ml-1">
                 (Nego)
               </span>
             )}
           </div>
 
           {product.originalPricePkr && (
-            <span className="text-[9px] text-neutral-400 dark:text-neutral-500 line-through bg-white/90 dark:bg-black/80 px-1 py-0.5 rounded">
+            <span className="text-[10px] text-neutral-400 dark:text-neutral-500 line-through bg-white/90 dark:bg-black/80 px-1.5 py-0.5 rounded-md">
               {formatPKR(product.originalPricePkr)}
             </span>
           )}
@@ -88,40 +88,40 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
         <div>
           {/* Category */}
-          <span className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider block">
+          <span className="text-[10px] font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-wider block">
             {getCategoryLabel(product.category)}
           </span>
 
           {/* Title */}
           <Link href={`/marketplace/${product.id}`} className="block mt-1">
-            <h3 className="font-bold text-black dark:text-white text-xs line-clamp-2 group-hover:text-neutral-600 dark:group-hover:text-neutral-200 transition-colors leading-snug">
+            <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 text-xs line-clamp-2 group-hover:text-black dark:group-hover:text-white transition-colors leading-snug">
               {product.title}
             </h3>
           </Link>
         </div>
 
-        {/* Location & Seller Row */}
-        <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800 space-y-2 text-xs">
+        {/* Location & Seller */}
+        <div className="pt-2.5 border-t border-neutral-100 dark:border-neutral-800/80 space-y-2 text-xs">
           {/* Campus Tag */}
-          <div className="flex items-center gap-1 text-neutral-600 dark:text-neutral-400 text-[11px]">
-            <MapPin className="w-3 h-3 text-neutral-500 flex-shrink-0" />
+          <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400 text-xs">
+            <MapPin className="w-3 h-3 text-neutral-400 flex-shrink-0" />
             <span className="truncate">{product.location || product.seller?.university || "Campus Pickup"}</span>
           </div>
 
           {/* Seller Profile Mini */}
           <div className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-1.5">
-              <span className="text-neutral-800 dark:text-neutral-300 font-medium truncate max-w-[120px]">
+              <span className="text-neutral-700 dark:text-neutral-300 font-medium truncate max-w-[120px]">
                 {sellerName}
               </span>
               {product.seller?.isVerifiedStudent && (
                 <span title="Verified Pakistani Student">
-                  <ShieldCheck className="w-3.5 h-3.5 text-black dark:text-white flex-shrink-0" />
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                 </span>
               )}
             </div>
 
-            <div className="text-[10px] text-neutral-500 dark:text-neutral-400 font-bold">
+            <div className="text-[11px] text-neutral-500 font-medium">
               ★ {(product.seller?.rating || 5.0).toFixed(1)}
             </div>
           </div>
@@ -131,17 +131,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <div className="grid grid-cols-2 gap-2 pt-1 text-xs">
           <Link
             href={`/marketplace/${product.id}`}
-            className="w-full py-1.5 px-2 rounded-lg bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-800 text-neutral-800 dark:text-neutral-200 flex items-center justify-center gap-1 transition-colors font-bold"
+            className="w-full py-1.5 px-2 rounded-xl bg-neutral-100 dark:bg-neutral-800/60 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 flex items-center justify-center gap-1 transition-colors font-medium"
           >
             <span>Details</span>
-            <ArrowUpRight className="w-3 h-3" />
+            <ArrowUpRight className="w-3 h-3 text-neutral-400" />
           </Link>
 
           <a
             href={whatsappUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full py-1.5 px-2 rounded-lg bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black flex items-center justify-center gap-1 transition-colors font-bold"
+            className="w-full py-1.5 px-2 rounded-xl bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black flex items-center justify-center gap-1 transition-colors font-medium"
           >
             <MessageCircle className="w-3 h-3" />
             <span>WhatsApp</span>

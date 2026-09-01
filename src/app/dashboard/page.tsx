@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/authContext";
-import { formatPKR, getConditionBadge } from "@/lib/utils";
+import { formatPKR } from "@/lib/utils";
 import { ProductCard } from "@/components/marketplace/ProductCard";
 import {
   User,
@@ -12,10 +12,8 @@ import {
   Layers,
   Heart,
   Phone,
-  Mail,
   Building,
   MapPin,
-  Clock,
   Plus,
   ArrowRight,
 } from "lucide-react";
@@ -34,19 +32,19 @@ export default function DashboardPage() {
 
   if (!isAuthenticated || !user) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-16 text-center font-mono space-y-6">
-        <div className="w-16 h-16 rounded-2xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-black dark:text-white flex items-center justify-center mx-auto shadow-sm">
-          <User className="w-8 h-8" />
+      <div className="max-w-xl mx-auto px-4 py-20 text-center space-y-6">
+        <div className="w-14 h-14 rounded-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 text-black dark:text-white flex items-center justify-center mx-auto shadow-xs">
+          <User className="w-6 h-6 text-neutral-500" />
         </div>
         <div className="space-y-2">
-          <h1 className="text-2xl font-bold text-black dark:text-white">Student Dashboard</h1>
-          <p className="text-xs text-neutral-600 dark:text-neutral-400 max-w-md mx-auto font-sans">
-            Please sign in with your Pakistani university account and verified mobile number to manage your hardware listings and PCB/CAD requests.
+          <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">Student Dashboard</h1>
+          <p className="text-xs text-neutral-500 max-w-sm mx-auto leading-relaxed">
+            Please sign in with your Pakistani university account and verified mobile number to manage your hardware listings and service quotes.
           </p>
         </div>
         <button
           onClick={() => openAuthModal("login")}
-          className="px-6 py-3 bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black font-bold text-xs rounded-xl shadow-sm cursor-pointer"
+          className="px-6 py-2.5 bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black font-semibold text-xs rounded-full shadow-xs cursor-pointer"
         >
           Sign In with University Account
         </button>
@@ -55,7 +53,7 @@ export default function DashboardPage() {
   }
 
   const userProducts = products.filter(
-    (p) => p.seller?.id === user?.id || p.seller?.phoneNumber === user?.phoneNumber
+    (p) => p.seller?.id === user?.id || (user?.phoneNumber && (p.seller?.phoneNumber === user.phoneNumber || p.seller?.phone === user.phoneNumber))
   );
 
   const userRequests = serviceRequests.filter(
@@ -65,37 +63,37 @@ export default function DashboardPage() {
   const savedProducts = products.filter((p) => savedProductIds.includes(p.id));
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 font-mono">
-      {/* Profile Header Banner */}
-      <div className="bg-white dark:bg-[#0a0a0a] border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 sm:p-8 relative overflow-hidden shadow-sm">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 space-y-8">
+      {/* Profile Header Banner (Pi.dev clean profile card) */}
+      <div className="bg-white dark:bg-[#121215] border border-neutral-200/80 dark:border-neutral-800/80 rounded-2xl p-6 sm:p-8 relative overflow-hidden shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 relative z-10">
+          <div className="flex items-center gap-4">
             <img
-              src={user?.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"}
+              src={user.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"}
               alt="Avatar"
-              className="w-16 h-16 rounded-xl object-cover border border-neutral-200 dark:border-neutral-800"
+              className="w-14 h-14 rounded-full object-cover border border-neutral-200 dark:border-neutral-700"
             />
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl font-bold text-black dark:text-white tracking-tight">
+                <h1 className="text-xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
                   {user.fullName}
                 </h1>
                 {user.isVerifiedStudent ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-black dark:text-white text-[11px] font-bold">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 text-[11px] font-semibold">
                     <ShieldCheck className="w-3.5 h-3.5" />
                     <span>Verified Student</span>
                   </span>
                 ) : (
                   <button
                     onClick={() => openAuthModal("verify_student")}
-                    className="text-[11px] text-neutral-500 hover:text-black dark:hover:text-white underline"
+                    className="text-[11px] text-neutral-400 hover:text-black dark:hover:text-white underline"
                   >
                     Verify Student ID
                   </button>
                 )}
               </div>
 
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-600 dark:text-neutral-400 font-sans">
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-500">
                 <span className="flex items-center gap-1">
                   <Building className="w-3.5 h-3.5 text-neutral-400" />
                   <span>{user.university}</span>
@@ -115,15 +113,15 @@ export default function DashboardPage() {
           <div className="flex items-center gap-2">
             <Link
               href="/sell"
-              className="px-4 py-2 bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black font-bold text-xs rounded-xl shadow-sm flex items-center gap-1.5 transition-all"
+              className="px-4 py-2 bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black font-semibold text-xs rounded-full shadow-xs flex items-center gap-1.5 transition-all"
             >
-              <Plus className="w-3.5 h-3.5 stroke-[3]" />
-              <span>Post New Hardware</span>
+              <Plus className="w-3.5 h-3.5" />
+              <span>Post Hardware</span>
             </Link>
 
             <Link
               href="/services/request"
-              className="px-4 py-2 bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-800 text-black dark:text-white font-bold text-xs rounded-xl transition-all"
+              className="px-4 py-2 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 font-semibold text-xs rounded-full transition-all"
             >
               <span>Request Quote</span>
             </Link>
@@ -131,41 +129,41 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-neutral-200 dark:border-neutral-800 flex gap-6 text-xs">
+      {/* Tabs (Pi.dev pill switcher) */}
+      <div className="flex bg-neutral-100/70 dark:bg-neutral-900/60 p-1 rounded-full border border-neutral-200/60 dark:border-neutral-800/60 max-w-md">
         <button
           onClick={() => setActiveTab("listings")}
-          className={`pb-3 font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
+          className={`flex-1 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
             activeTab === "listings"
-              ? "border-black dark:border-white text-black dark:text-white"
-              : "border-transparent text-neutral-500 hover:text-black dark:hover:text-white"
+              ? "bg-white dark:bg-neutral-800 text-black dark:text-white shadow-xs"
+              : "text-neutral-500 hover:text-black dark:hover:text-white"
           }`}
         >
-          <Cpu className="w-4 h-4" />
-          <span>My Hardware Listings ({userProducts.length})</span>
+          <Cpu className="w-3.5 h-3.5" />
+          <span>My Listings ({userProducts.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab("orders")}
-          className={`pb-3 font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
+          className={`flex-1 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
             activeTab === "orders"
-              ? "border-black dark:border-white text-black dark:text-white"
-              : "border-transparent text-neutral-500 hover:text-black dark:hover:text-white"
+              ? "bg-white dark:bg-neutral-800 text-black dark:text-white shadow-xs"
+              : "text-neutral-500 hover:text-black dark:hover:text-white"
           }`}
         >
-          <Layers className="w-4 h-4" />
-          <span>Service Requests ({userRequests.length})</span>
+          <Layers className="w-3.5 h-3.5" />
+          <span>Quotes ({userRequests.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab("saved")}
-          className={`pb-3 font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
+          className={`flex-1 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
             activeTab === "saved"
-              ? "border-black dark:border-white text-black dark:text-white"
-              : "border-transparent text-neutral-500 hover:text-black dark:hover:text-white"
+              ? "bg-white dark:bg-neutral-800 text-black dark:text-white shadow-xs"
+              : "text-neutral-500 hover:text-black dark:hover:text-white"
           }`}
         >
-          <Heart className="w-4 h-4" />
+          <Heart className="w-3.5 h-3.5" />
           <span>Wishlist ({savedProducts.length})</span>
         </button>
       </div>
@@ -180,15 +178,15 @@ export default function DashboardPage() {
               ))}
             </div>
           ) : (
-            <div className="p-12 text-center bg-white dark:bg-[#0a0a0a] border border-neutral-200 dark:border-neutral-800 rounded-2xl space-y-3 shadow-sm">
+            <div className="p-12 text-center bg-white dark:bg-[#121215] border border-neutral-200/80 dark:border-neutral-800/80 rounded-2xl space-y-3 shadow-xs">
               <Cpu className="w-10 h-10 text-neutral-400 mx-auto" />
-              <h3 className="text-sm font-bold text-black dark:text-white">No active listings posted yet</h3>
-              <p className="text-xs text-neutral-500 font-sans">
+              <h3 className="text-sm font-semibold text-black dark:text-white">No active listings posted yet</h3>
+              <p className="text-xs text-neutral-500">
                 Sell your extra ESP32 boards, sensors, and motors to other students on campus.
               </p>
               <Link
                 href="/sell"
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-xs font-bold rounded-xl shadow-sm"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-full shadow-xs"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Post Your First Item</span>
@@ -205,24 +203,24 @@ export default function DashboardPage() {
               {userRequests.map((req) => (
                 <div
                   key={req.id}
-                  className="p-5 bg-white dark:bg-[#0a0a0a] border border-neutral-200 dark:border-neutral-800 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm"
+                  className="p-5 bg-white dark:bg-[#121215] border border-neutral-200/80 dark:border-neutral-800/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs"
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-[10px] uppercase font-bold">
+                      <span className="px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-[10px] uppercase font-semibold text-neutral-700 dark:text-neutral-300">
                         {req.serviceType.replace("_", " ")}
                       </span>
-                      <span className="text-xs font-bold text-black dark:text-white">{req.title}</span>
+                      <span className="text-xs font-semibold text-neutral-900 dark:text-neutral-100">{req.title}</span>
                     </div>
-                    <p className="text-xs text-neutral-500 font-sans">{req.description}</p>
-                    <span className="text-[10px] text-neutral-400 block">Ref: #{req.id}</span>
+                    <p className="text-xs text-neutral-500">{req.description}</p>
+                    <span className="text-[11px] text-neutral-400 block">Ref: #{req.id}</span>
                   </div>
 
                   <div className="text-right space-y-1">
                     <span className="text-sm font-bold text-black dark:text-white block">
                       {formatPKR(req.estimatedCostPkr)}
                     </span>
-                    <span className="inline-block px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold uppercase">
+                    <span className="inline-block px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold uppercase">
                       {req.status}
                     </span>
                   </div>
@@ -230,15 +228,15 @@ export default function DashboardPage() {
               ))}
             </div>
           ) : (
-            <div className="p-12 text-center bg-white dark:bg-[#0a0a0a] border border-neutral-200 dark:border-neutral-800 rounded-2xl space-y-3 shadow-sm">
+            <div className="p-12 text-center bg-white dark:bg-[#121215] border border-neutral-200/80 dark:border-neutral-800/80 rounded-2xl space-y-3 shadow-xs">
               <Layers className="w-10 h-10 text-neutral-400 mx-auto" />
-              <h3 className="text-sm font-bold text-black dark:text-white">No engineering quotes submitted yet</h3>
-              <p className="text-xs text-neutral-500 font-sans">
+              <h3 className="text-sm font-semibold text-black dark:text-white">No engineering quotes submitted yet</h3>
+              <p className="text-xs text-neutral-500">
                 Submit your Gerber files or 3D STEP models for rapid PCB fabrication and 3D printing.
               </p>
               <Link
                 href="/services/request"
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-xs font-bold rounded-xl shadow-sm"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-full shadow-xs"
               >
                 <span>Request a Quote</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -257,15 +255,15 @@ export default function DashboardPage() {
               ))}
             </div>
           ) : (
-            <div className="p-12 text-center bg-white dark:bg-[#0a0a0a] border border-neutral-200 dark:border-neutral-800 rounded-2xl space-y-3 shadow-sm">
+            <div className="p-12 text-center bg-white dark:bg-[#121215] border border-neutral-200/80 dark:border-neutral-800/80 rounded-2xl space-y-3 shadow-xs">
               <Heart className="w-10 h-10 text-neutral-400 mx-auto" />
-              <h3 className="text-sm font-bold text-black dark:text-white">Wishlist is empty</h3>
-              <p className="text-xs text-neutral-500 font-sans">
+              <h3 className="text-sm font-semibold text-black dark:text-white">Wishlist is empty</h3>
+              <p className="text-xs text-neutral-500">
                 Click the heart icon on any hardware item in the marketplace to save it for later.
               </p>
               <Link
                 href="/marketplace"
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-xs font-bold rounded-xl shadow-sm"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-full shadow-xs"
               >
                 <span>Explore Marketplace</span>
                 <ArrowRight className="w-3.5 h-3.5" />
