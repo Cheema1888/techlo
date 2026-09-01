@@ -25,15 +25,19 @@ model User {
   isVerifiedStudent   Boolean          @default(false)
   city                String           @default("Islamabad")
   avatarUrl           String?
+  avatarColor         String?          @default("cyan") // cyan, emerald, purple, orange, rose, amber, carbon
   rating              Float            @default(5.0)
   dealsCompleted      Int              @default(0)
-  role                String           @default("STUDENT")
+  role                String           @default("STUDENT") // STUDENT, ADMIN
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
 
   products            Product[]
   serviceRequests     ServiceRequest[]
   savedItems          SavedItem[]
+  sentMessages        ChatMessage[]    @relation("SentMessages")
+  buyerConversations  Conversation[]   @relation("BuyerConversations")
+  sellerConversations Conversation[]   @relation("SellerConversations")
 
   @@index([email])
   @@index([phoneNumber])
@@ -41,32 +45,66 @@ model User {
 }
 
 model Product {
-  id                String       @id @default(uuid())
+  id                String         @id @default(uuid())
   title             String
-  category          String       // microcontrollers, sensors, motors_actuators, power_bms, etc.
-  condition         String       // brand_new, fyp_tested, gently_used, desoldered_working, for_parts
+  category          String         // microcontrollers, sensors, motors_actuators, power_bms, etc.
+  condition         String         // brand_new, fyp_tested, gently_used, desoldered_working, for_parts
   pricePkr          Float
   originalPricePkr  Float?
-  isNegotiable      Boolean      @default(true)
-  imagesJson        String       // JSON stringified array of image URLs
+  isNegotiable      Boolean        @default(true)
+  showPhoneNumber   Boolean        @default(true) // privacy toggle for seller
+  imagesJson        String         // JSON stringified array of image URLs
   description       String
-  specsJson         String?      // JSON stringified technical specifications dictionary
-  quantityAvailable Int          @default(1)
-  status            String       @default("available") // available, reserved, sold
+  specsJson         String?        // JSON stringified technical specifications dictionary
+  quantityAvailable Int            @default(1)
+  status            String         @default("available") // available, reserved, sold
   location          String
-  city              String       @default("Islamabad")
-  viewsCount        Int          @default(0)
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
+  city              String         @default("Islamabad")
+  viewsCount        Int            @default(0)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 
   sellerId          String
-  seller            User         @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  seller            User           @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   savedBy           SavedItem[]
+  conversations     Conversation[]
 
   @@index([category])
   @@index([condition])
   @@index([sellerId])
   @@index([city])
+}
+
+model Conversation {
+  id          String        @id @default(uuid())
+  productId   String?
+  product     Product?      @relation(fields: [productId], references: [id], onDelete: SetNull)
+  buyerId     String
+  buyer       User          @relation("BuyerConversations", fields: [buyerId], references: [id], onDelete: Cascade)
+  sellerId    String
+  seller      User          @relation("SellerConversations", fields: [sellerId], references: [id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  messages    ChatMessage[]
+
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([productId])
+}
+
+model ChatMessage {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  content        String
+  isRead         Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+  @@index([senderId])
 }
 
 model ServiceRequest {
@@ -103,4 +141,18 @@ model SavedItem {
 
   @@unique([userId, productId])
   @@index([userId])
+}
+
+model ActivityLog {
+  id           String   @id @default(uuid())
+  actionType   String   // USER_SIGNUP, PRODUCT_POSTED, QUOTE_REQUESTED, CHAT_STARTED, STATUS_UPDATED
+  title        String
+  description  String
+  actorName    String
+  actorRole    String   @default("STUDENT")
+  metadataJson String?  // Optional extra details
+  createdAt    DateTime @default(now())
+
+  @@index([actionType])
+  @@index([createdAt])
 }

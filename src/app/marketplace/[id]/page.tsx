@@ -16,6 +16,7 @@ import {
   Check,
 } from "lucide-react";
 import { ProductCard } from "@/components/marketplace/ProductCard";
+import { ChotuAvatar } from "@/components/common/ChotuAvatar";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -236,17 +237,31 @@ export default function ProductDetailPage() {
               <span>Campus Pickup: <strong>{productData.location || productData.seller?.university}</strong></span>
             </div>
 
-            {/* WhatsApp Direct Action */}
-            <div className="pt-2">
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full py-3.5 bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black font-semibold text-xs rounded-full shadow-xs flex items-center justify-center gap-2 transition-all"
+            {/* Action Buttons (WhatsApp & Web Chat) */}
+            <div className="pt-2 space-y-2">
+              {productData.showPhoneNumber && productData.seller?.phone ? (
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3.5 bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black font-semibold text-xs rounded-full shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Contact on WhatsApp ({productData.seller.phone})</span>
+                </a>
+              ) : (
+                <div className="p-2.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/80 rounded-xl text-amber-800 dark:text-amber-300 text-[11px] text-center">
+                  🔒 Phone number hidden by seller for privacy.
+                </div>
+              )}
+
+              <Link
+                href={`/chat?productId=${productData.id}&sellerId=${productData.seller?.id}`}
+                className="w-full py-3 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-900 dark:text-neutral-100 font-semibold text-xs rounded-full shadow-xs flex items-center justify-center gap-2 transition-all text-center"
               >
-                <MessageCircle className="w-4 h-4" />
-                <span>Contact Seller on WhatsApp</span>
-              </a>
+                <MessageCircle className="w-3.5 h-3.5" />
+                <span>Chat on TECHLO Webapp</span>
+              </Link>
             </div>
           </div>
 
@@ -256,10 +271,11 @@ export default function ProductDetailPage() {
               Student Seller
             </span>
             <div className="flex items-center gap-3">
-              <img
-                src={productData.seller?.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"}
-                alt="Seller"
-                className="w-12 h-12 rounded-full object-cover border border-neutral-200 dark:border-neutral-700"
+              <ChotuAvatar
+                name={sellerName}
+                avatarUrl={productData.seller?.avatarUrl}
+                color={productData.seller?.avatarColor || "cyan"}
+                size="md"
               />
               <div className="space-y-0.5">
                 <div className="flex items-center gap-1.5">

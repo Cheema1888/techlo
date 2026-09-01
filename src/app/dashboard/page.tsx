@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/authContext";
 import { formatPKR } from "@/lib/utils";
 import { ProductCard } from "@/components/marketplace/ProductCard";
+import { ChotuAvatar } from "@/components/common/ChotuAvatar";
 import {
   User,
   ShieldCheck,
@@ -68,10 +69,11 @@ export default function DashboardPage() {
       <div className="bg-white dark:bg-[#121215] border border-neutral-200/80 dark:border-neutral-800/80 rounded-2xl p-6 sm:p-8 relative overflow-hidden shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 relative z-10">
           <div className="flex items-center gap-4">
-            <img
-              src={user.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"}
-              alt="Avatar"
-              className="w-14 h-14 rounded-full object-cover border border-neutral-200 dark:border-neutral-700"
+            <ChotuAvatar
+              name={user.fullName}
+              avatarUrl={user.avatarUrl}
+              color={user.avatarColor || "cyan"}
+              size="lg"
             />
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">

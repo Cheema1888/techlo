@@ -68,6 +68,7 @@ export async function GET(req: NextRequest) {
             rating: true,
             dealsCompleted: true,
             avatarUrl: true,
+            avatarColor: true,
           },
         },
       },
@@ -84,6 +85,7 @@ export async function GET(req: NextRequest) {
       pricePkr: p.pricePkr,
       originalPricePkr: p.originalPricePkr,
       isNegotiable: p.isNegotiable,
+      showPhoneNumber: p.showPhoneNumber ?? true,
       images: JSON.parse(p.imagesJson || "[]"),
       description: p.description,
       specs: p.specsJson ? JSON.parse(p.specsJson) : {},
@@ -95,13 +97,15 @@ export async function GET(req: NextRequest) {
         id: p.seller.id,
         name: p.seller.fullName,
         email: p.seller.email,
-        phone: p.seller.phoneNumber,
+        phone: p.showPhoneNumber ? p.seller.phoneNumber : undefined,
+        phoneNumber: p.showPhoneNumber ? p.seller.phoneNumber : undefined,
         university: p.seller.university,
         campus: p.seller.campus || "",
         isVerifiedStudent: p.seller.isVerifiedStudent,
         rating: p.seller.rating,
         dealsCompleted: p.seller.dealsCompleted,
         avatarUrl: p.seller.avatarUrl || "",
+        avatarColor: p.seller.avatarColor || "cyan",
       },
     }));
 
@@ -122,6 +126,7 @@ export async function POST(req: NextRequest) {
       pricePkr,
       originalPricePkr,
       isNegotiable,
+      showPhoneNumber = true,
       images,
       description,
       specs,
@@ -156,6 +161,7 @@ export async function POST(req: NextRequest) {
         pricePkr: parseFloat(pricePkr),
         originalPricePkr: originalPricePkr ? parseFloat(originalPricePkr) : null,
         isNegotiable: Boolean(isNegotiable),
+        showPhoneNumber: Boolean(showPhoneNumber),
         imagesJson: JSON.stringify(images || ["https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80"]),
         description,
         specsJson: specs ? JSON.stringify(specs) : null,
@@ -168,6 +174,20 @@ export async function POST(req: NextRequest) {
         seller: true,
       },
     });
+
+    // Log Activity
+    try {
+      await prisma.activityLog.create({
+        data: {
+          actionType: "PRODUCT_POSTED",
+          title: "New Hardware Listed",
+          description: `${createdProduct.seller.fullName} listed "${createdProduct.title}" for Rs. ${createdProduct.pricePkr.toLocaleString()}`,
+          actorName: createdProduct.seller.fullName,
+          actorRole: "STUDENT",
+          metadataJson: JSON.stringify({ productId: createdProduct.id, category: createdProduct.category }),
+        },
+      });
+    } catch (e) {}
 
     return NextResponse.json({ success: true, data: createdProduct }, { status: 201 });
   } catch (error: any) {

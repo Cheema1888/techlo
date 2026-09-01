@@ -11,6 +11,8 @@ interface PendingSignupData {
   campus?: string;
   eduEmail?: string;
   city?: string;
+  avatarUrl?: string;
+  avatarColor?: string;
 }
 
 interface AuthContextType {

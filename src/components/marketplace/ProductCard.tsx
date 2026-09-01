@@ -5,12 +5,14 @@ import Link from "next/link";
 import { ProductListing } from "@/lib/types";
 import { formatPKR, getConditionBadge, getCategoryLabel } from "@/lib/utils";
 import { useAuth } from "@/lib/authContext";
+import { ChotuAvatar } from "../common/ChotuAvatar";
 import {
   Heart,
   MessageCircle,
   MapPin,
   ShieldCheck,
   ArrowUpRight,
+  Lock,
 } from "lucide-react";
 
 interface ProductCardProps {
@@ -22,14 +24,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const isSaved = savedProductIds.includes(product.id);
   const conditionInfo = getConditionBadge(product.condition);
 
-  // WhatsApp Direct Link
-  const rawPhone = product.seller?.phone || product.seller?.phoneNumber || "923000000000";
+  const rawPhone = product.seller?.phone || product.seller?.phoneNumber;
   const sellerName = product.seller?.name || product.seller?.fullName || "Seller";
-  const cleanPhone = rawPhone.replace(/[^0-9]/g, "");
+  const hasVisiblePhone = Boolean(product.showPhoneNumber && rawPhone);
+
+  const cleanPhone = (rawPhone || "923000000000").replace(/[^0-9]/g, "");
   const whatsappMessage = encodeURIComponent(
     `Assalam-o-Alaikum ${sellerName}! I saw your listing for "${product.title}" on TECHLO (${formatPKR(product.pricePkr)}). Is it still available for campus pickup?`
   );
   const whatsappUrl = `https://wa.me/${cleanPhone}?text=${whatsappMessage}`;
+  const webChatUrl = `/chat?productId=${product.id}&sellerId=${product.seller?.id}`;
 
   return (
     <div className="group relative flex flex-col bg-white dark:bg-[#121215] border border-neutral-200/80 dark:border-neutral-800/80 hover:border-neutral-400 dark:hover:border-neutral-600 rounded-2xl overflow-hidden transition-all duration-200 shadow-xs hover:shadow-md">
@@ -108,17 +112,25 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             <span className="truncate">{product.location || product.seller?.university || "Campus Pickup"}</span>
           </div>
 
-          {/* Seller Profile Mini */}
+          {/* Seller Profile Mini with ChotuAvatar */}
           <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-1.5">
-              <span className="text-neutral-700 dark:text-neutral-300 font-medium truncate max-w-[120px]">
-                {sellerName}
-              </span>
-              {product.seller?.isVerifiedStudent && (
-                <span title="Verified Pakistani Student">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+            <div className="flex items-center gap-2">
+              <ChotuAvatar
+                name={sellerName}
+                avatarUrl={product.seller?.avatarUrl}
+                color={product.seller?.avatarColor || "cyan"}
+                size="xs"
+              />
+              <div className="flex items-center gap-1 truncate max-w-[110px]">
+                <span className="text-neutral-700 dark:text-neutral-300 font-medium truncate">
+                  {sellerName}
                 </span>
-              )}
+                {product.seller?.isVerifiedStudent && (
+                  <span title="Verified Pakistani Student">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className="text-[11px] text-neutral-500 font-medium">
@@ -137,15 +149,26 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             <ArrowUpRight className="w-3 h-3 text-neutral-400" />
           </Link>
 
-          <a
-            href={whatsappUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full py-1.5 px-2 rounded-xl bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black flex items-center justify-center gap-1 transition-colors font-medium"
-          >
-            <MessageCircle className="w-3 h-3" />
-            <span>WhatsApp</span>
-          </a>
+          {hasVisiblePhone ? (
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-1.5 px-2 rounded-xl bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black flex items-center justify-center gap-1 transition-colors font-medium"
+            >
+              <MessageCircle className="w-3 h-3" />
+              <span>WhatsApp</span>
+            </a>
+          ) : (
+            <Link
+              href={webChatUrl}
+              className="w-full py-1.5 px-2 rounded-xl bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black flex items-center justify-center gap-1 transition-colors font-medium"
+              title="Phone number hidden by seller • Chat on TECHLO"
+            >
+              <MessageCircle className="w-3 h-3" />
+              <span>Web Chat</span>
+            </Link>
+          )}
         </div>
       </div>
     </div>

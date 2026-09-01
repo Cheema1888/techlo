@@ -4,7 +4,7 @@ import { generateSecureOtp, dispatchSmsOtp } from "@/lib/smsGateway";
 
 export async function POST(req: NextRequest) {
   try {
-    const { fullName, email, phoneNumber, university, campus, eduEmail, city, password } = await req.json();
+    const { fullName, email, phoneNumber, university, campus, eduEmail, city, password, avatarUrl, avatarColor } = await req.json();
 
     if (!fullName || !phoneNumber || !university) {
       return NextResponse.json(
@@ -43,6 +43,8 @@ export async function POST(req: NextRequest) {
         otpCode: generatedOtp,
         otpExpiresAt: otpExpires,
         city: city || "Islamabad",
+        avatarUrl: avatarUrl || undefined,
+        avatarColor: avatarColor || "cyan",
       },
       create: {
         fullName,
@@ -57,9 +59,24 @@ export async function POST(req: NextRequest) {
         isPhoneVerified: false,
         isVerifiedStudent: finalEmail.toLowerCase().endsWith(".edu.pk") || (eduEmail && eduEmail.includes(".edu.pk")) || false,
         city: city || "Islamabad",
-        avatarUrl: `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80`,
+        avatarUrl: avatarUrl || undefined,
+        avatarColor: avatarColor || "cyan",
       },
     });
+
+    // Log Activity
+    try {
+      await prisma.activityLog.create({
+        data: {
+          actionType: "USER_SIGNUP",
+          title: "New Student Registered",
+          description: `${user.fullName} registered from ${user.university} (${cleanPhone})`,
+          actorName: user.fullName,
+          actorRole: "STUDENT",
+          metadataJson: JSON.stringify({ userId: user.id, university: user.university }),
+        },
+      });
+    } catch (e) {}
 
     // Dispatch SMS via configured gateway (Twilio, BrandSMS, or local dev)
     await dispatchSmsOtp(cleanPhone, generatedOtp, "registration");

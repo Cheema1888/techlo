@@ -23,6 +23,7 @@ export default function SellHardwarePage() {
   const [pricePkr, setPricePkr] = useState<string>("");
   const [originalPricePkr, setOriginalPricePkr] = useState<string>("");
   const [isNegotiable, setIsNegotiable] = useState(true);
+  const [showPhoneNumber, setShowPhoneNumber] = useState(true);
   const [description, setDescription] = useState("");
   const [quantity, setQuantity] = useState<number>(1);
   const [campusLocation, setCampusLocation] = useState(user?.campus || "");
@@ -105,6 +106,7 @@ export default function SellHardwarePage() {
         pricePkr: parseFloat(pricePkr),
         originalPricePkr: originalPricePkr ? parseFloat(originalPricePkr) : undefined,
         isNegotiable,
+        showPhoneNumber,
         images: finalImages,
         description: description.trim() || `Listed by ${user.fullName} (${user.university}). Tested and available for campus pickup or courier.`,
         specs: Object.keys(specsDict).length > 0 ? specsDict : undefined,
@@ -304,15 +306,36 @@ export default function SellHardwarePage() {
               </div>
             </div>
 
-            <label className="flex items-center gap-2 text-xs text-neutral-700 dark:text-neutral-300 cursor-pointer pt-1">
-              <input
-                type="checkbox"
-                checked={isNegotiable}
-                onChange={(e) => setIsNegotiable(e.target.checked)}
-                className="rounded accent-black dark:accent-white"
-              />
-              <span>Price is negotiable for students</span>
-            </label>
+            <div className="space-y-2 pt-2 border-t border-neutral-100 dark:border-neutral-800/80">
+              <label className="flex items-center gap-2 text-xs text-neutral-700 dark:text-neutral-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isNegotiable}
+                  onChange={(e) => setIsNegotiable(e.target.checked)}
+                  className="rounded accent-black dark:accent-white"
+                />
+                <span>Price is negotiable for students</span>
+              </label>
+
+              <label className="flex items-start gap-2 text-xs text-neutral-700 dark:text-neutral-300 cursor-pointer pt-1">
+                <input
+                  type="checkbox"
+                  checked={showPhoneNumber}
+                  onChange={(e) => setShowPhoneNumber(e.target.checked)}
+                  className="rounded accent-black dark:accent-white mt-0.5"
+                />
+                <div>
+                  <span className="font-semibold text-black dark:text-white block">
+                    Show Mobile Phone Publicly on Listing
+                  </span>
+                  <span className="text-[11px] text-neutral-500">
+                    {showPhoneNumber
+                      ? "Buyers can contact you directly on WhatsApp and phone."
+                      : "Phone number will be hidden. Buyers will communicate with you via TECHLO Web Chat."}
+                  </span>
+                </div>
+              </label>
+            </div>
           </div>
 
           {/* 3. Photos & Technical Specs */}

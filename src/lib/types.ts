@@ -40,6 +40,8 @@ export interface UserProfile {
   isVerifiedStudent: boolean;
   city: string;
   avatarUrl?: string;
+  avatarColor?: string; // cyan, emerald, purple, orange, rose, amber, carbon
+  role?: string;
   joinedDate?: string;
   rating: number;
   dealsCompleted: number;
@@ -53,6 +55,7 @@ export interface ProductListing {
   pricePkr: number;
   originalPricePkr?: number;
   isNegotiable: boolean;
+  showPhoneNumber?: boolean; // privacy toggle
   images: string[];
   description: string;
   specs?: { [key: string]: string };
@@ -64,7 +67,8 @@ export interface ProductListing {
     university: string;
     campus: string;
     city: string;
-    avatarUrl: string;
+    avatarUrl?: string;
+    avatarColor?: string;
     isVerifiedStudent: boolean;
     rating: number;
     dealsCompleted?: number;

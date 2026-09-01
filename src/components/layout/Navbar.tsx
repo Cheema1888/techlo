@@ -6,28 +6,26 @@ import { usePathname, useRouter } from "next/navigation";
 import { TechloLogo } from "../branding/TechloLogo";
 import { useAuth } from "@/lib/authContext";
 import { useTheme } from "@/lib/themeContext";
+import { ChotuAvatar } from "../common/ChotuAvatar";
 import {
   Search,
   Plus,
-  Cpu,
-  Layers,
-  GraduationCap,
+  MessageCircle,
+  Shield,
   User,
   LogOut,
-  ShieldCheck,
-  Heart,
-  Menu,
-  X,
-  FileText,
   ChevronDown,
   Sun,
   Moon,
+  Menu,
+  X,
+  FileText,
 } from "lucide-react";
 
 export const Navbar: React.FC = () => {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, isAuthenticated, openAuthModal, logout, savedProductIds } = useAuth();
+  const { user, isAuthenticated, openAuthModal, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [searchQuery, setSearchQuery] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -44,6 +42,7 @@ export const Navbar: React.FC = () => {
     { name: "Marketplace", href: "/marketplace" },
     { name: "PCB & CAD Services", href: "/services" },
     { name: "Universities", href: "/universities" },
+    { name: "Live Chat", href: "/chat" },
   ];
 
   return (
@@ -94,10 +93,21 @@ export const Navbar: React.FC = () => {
 
           {/* Action CTAs */}
           <div className="flex items-center gap-2 sm:gap-2.5">
-            {/* Theme Toggle (Day / Night - Smooth Pi.dev Switcher) */}
+            {/* Live Chat Direct Icon (When signed in) */}
+            {isAuthenticated && (
+              <Link
+                href="/chat"
+                className="p-2 rounded-full bg-neutral-100/70 dark:bg-neutral-900/60 border border-neutral-200/60 dark:border-neutral-800/60 text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white transition-all"
+                title="Open Web Chat"
+              >
+                <MessageCircle className="w-3.5 h-3.5" />
+              </Link>
+            )}
+
+            {/* Theme Toggle (Day / Night) */}
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-full bg-neutral-100/70 dark:bg-neutral-900/60 border border-neutral-200/60 dark:border-neutral-800/60 text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white hover:border-neutral-400 dark:hover:border-neutral-600 transition-all cursor-pointer"
+              className="p-2 rounded-full bg-neutral-100/70 dark:bg-neutral-900/60 border border-neutral-200/60 dark:border-neutral-800/60 text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white transition-all cursor-pointer"
               title={`Switch to ${theme === "dark" ? "Day Mode (Light)" : "Night Mode (Dark)"}`}
             >
               {theme === "dark" ? (
@@ -107,7 +117,7 @@ export const Navbar: React.FC = () => {
               )}
             </button>
 
-            {/* Sell Hardware Button */}
+            {/* Post Hardware Button */}
             <Link
               href="/sell"
               className="hidden sm:inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black text-xs font-semibold transition-all shadow-xs"
@@ -123,10 +133,11 @@ export const Navbar: React.FC = () => {
                   onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
                   className="flex items-center gap-2 p-1 pl-1 pr-2.5 rounded-full bg-neutral-100/70 dark:bg-neutral-900/60 border border-neutral-200/60 dark:border-neutral-800/60 hover:border-neutral-400 dark:hover:border-neutral-700 transition-all cursor-pointer"
                 >
-                  <img
-                    src={user.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"}
-                    alt={user.fullName}
-                    className="w-6 h-6 rounded-full object-cover border border-neutral-300 dark:border-neutral-700"
+                  <ChotuAvatar
+                    name={user.fullName}
+                    avatarUrl={user.avatarUrl}
+                    color={user.avatarColor || "cyan"}
+                    size="xs"
                   />
                   <span className="text-xs font-medium text-black dark:text-white hidden sm:block max-w-[90px] truncate">
                     {user.fullName.split(" ")[0]}
@@ -154,6 +165,14 @@ export const Navbar: React.FC = () => {
                     </Link>
 
                     <Link
+                      href="/chat"
+                      className="flex items-center gap-2 px-4 py-2 text-xs text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5 text-neutral-400" />
+                      <span>Web Chat</span>
+                    </Link>
+
+                    <Link
                       href="/services/request"
                       className="flex items-center gap-2 px-4 py-2 text-xs text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
                     >
@@ -162,11 +181,11 @@ export const Navbar: React.FC = () => {
                     </Link>
 
                     <Link
-                      href="/sell"
+                      href="/admin"
                       className="flex items-center gap-2 px-4 py-2 text-xs text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
                     >
-                      <Plus className="w-3.5 h-3.5 text-neutral-400" />
-                      <span>Post Hardware Ad</span>
+                      <Shield className="w-3.5 h-3.5 text-neutral-400" />
+                      <span>Admin Control Panel</span>
                     </Link>
 
                     <div className="border-t border-neutral-100 dark:border-neutral-800 my-1"></div>
@@ -201,54 +220,29 @@ export const Navbar: React.FC = () => {
           </div>
         </div>
 
-        {/* Mobile Navigation Drawer */}
+        {/* Mobile Dropdown Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-neutral-200/70 dark:border-neutral-800/70 py-4 space-y-3 animate-fadeIn">
-            <form onSubmit={handleSearch} className="relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
-              <input
-                type="text"
-                placeholder="Search components..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs text-black dark:text-white"
-              />
-            </form>
-
-            <div className="flex flex-col gap-1 pt-1">
+          <div className="md:hidden py-4 border-t border-neutral-200/80 dark:border-neutral-800/80 space-y-3">
+            <nav className="flex flex-col space-y-1">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.name}
+                  href={link.href}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="px-3 py-2 text-xs font-medium text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl"
+                >
+                  {link.name}
+                </Link>
+              ))}
               <Link
-                href="/marketplace"
+                href="/admin"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="flex items-center gap-2.5 p-2 rounded-xl text-xs font-medium text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-900"
+                className="px-3 py-2 text-xs font-medium text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl flex items-center gap-1.5"
               >
-                <Cpu className="w-4 h-4" />
-                <span>Hardware Marketplace</span>
+                <Shield className="w-3.5 h-3.5 text-neutral-400" />
+                <span>Admin Panel</span>
               </Link>
-              <Link
-                href="/services"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="flex items-center gap-2.5 p-2 rounded-xl text-xs font-medium text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-900"
-              >
-                <Layers className="w-4 h-4" />
-                <span>PCB & 3D CAD Services</span>
-              </Link>
-              <Link
-                href="/universities"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="flex items-center gap-2.5 p-2 rounded-xl text-xs font-medium text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-900"
-              >
-                <GraduationCap className="w-4 h-4" />
-                <span>Universities Directory</span>
-              </Link>
-              <Link
-                href="/sell"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="flex items-center gap-2.5 p-2 rounded-xl text-xs font-medium text-black dark:text-white bg-neutral-100 dark:bg-neutral-900"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Post Hardware Ad</span>
-              </Link>
-            </div>
+            </nav>
           </div>
         )}
       </div>

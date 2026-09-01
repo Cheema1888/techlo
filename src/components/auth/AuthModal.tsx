@@ -4,11 +4,11 @@ import React, { useState } from "react";
 import { useAuth } from "@/lib/authContext";
 import { TechloLogo } from "../branding/TechloLogo";
 import { PhoneOtpModal } from "./PhoneOtpModal";
+import { ChotuAvatar, ChotuColor } from "../common/ChotuAvatar";
 import { PAKISTANI_UNIVERSITIES } from "@/lib/mockData";
 import {
   X,
   Lock,
-  User,
   Phone,
   GraduationCap,
   Building,
@@ -17,7 +17,18 @@ import {
   Eye,
   EyeOff,
   AlertCircle,
+  Sparkles,
 } from "lucide-react";
+
+const CHOTU_COLORS: Array<{ id: ChotuColor; label: string; bg: string }> = [
+  { id: "cyan", label: "Cyan", bg: "bg-cyan-500" },
+  { id: "emerald", label: "Emerald", bg: "bg-emerald-500" },
+  { id: "purple", label: "Purple", bg: "bg-purple-500" },
+  { id: "orange", label: "Orange", bg: "bg-orange-500" },
+  { id: "rose", label: "Rose", bg: "bg-rose-500" },
+  { id: "amber", label: "Amber", bg: "bg-amber-500" },
+  { id: "carbon", label: "Carbon", bg: "bg-zinc-700" },
+];
 
 export const AuthModal: React.FC = () => {
   const {
@@ -47,6 +58,8 @@ export const AuthModal: React.FC = () => {
   const [selectedUniversity, setSelectedUniversity] = useState(PAKISTANI_UNIVERSITIES[0].name);
   const [campusCity, setCampusCity] = useState("");
   const [eduEmail, setEduEmail] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [avatarColor, setAvatarColor] = useState<ChotuColor>("cyan");
   const [signupError, setSignupError] = useState("");
 
   // Student Verification State
@@ -81,7 +94,7 @@ export const AuthModal: React.FC = () => {
       const success = await loginWithEmailOrPhone(loginPhone.trim(), loginPassword, loginUniversity);
       setIsSubmittingLogin(false);
       if (!success) {
-        setLoginError("Invalid credentials or account not found. Please register if you're new.");
+        setLoginError("No account found with this phone number. Please register your student account first.");
       }
     } catch (err: any) {
       setIsSubmittingLogin(false);
@@ -117,6 +130,8 @@ export const AuthModal: React.FC = () => {
       campus: campusCity.trim() || `${selectedUniversity} Main Campus`,
       eduEmail: eduEmail.trim(),
       city: campusCity.split("/")[0].trim() || "Islamabad",
+      avatarUrl: avatarUrl.trim() || undefined,
+      avatarColor: avatarColor || "cyan",
     });
 
     try {
@@ -350,6 +365,64 @@ export const AuthModal: React.FC = () => {
                   </div>
                 )}
 
+                {/* Chotu Bot Avatar & Photo Selector */}
+                <div className="p-3 bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200/80 dark:border-neutral-800/80 rounded-2xl space-y-2.5">
+                  <div className="flex items-center gap-3">
+                    <ChotuAvatar
+                      name={fullName || "Student"}
+                      avatarUrl={avatarUrl}
+                      color={avatarColor}
+                      size="lg"
+                    />
+                    <div className="space-y-1">
+                      <span className="font-semibold text-black dark:text-white block text-xs">
+                        Student Avatar
+                      </span>
+                      <span className="text-[11px] text-neutral-500 block">
+                        Pick your <strong>Chotu Bot Color</strong> or paste a custom photo URL below.
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Chotu Bot Color Palette Chips */}
+                  <div className="space-y-1 pt-1 border-t border-neutral-200/60 dark:border-neutral-800/60">
+                    <span className="text-[10px] text-neutral-400 uppercase font-semibold block">
+                      Choose Chotu Bot Color:
+                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {CHOTU_COLORS.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => {
+                            setAvatarColor(c.id);
+                            setAvatarUrl("");
+                          }}
+                          className={`px-2.5 py-1 rounded-full text-[10px] font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                            avatarColor === c.id && !avatarUrl
+                              ? "bg-black text-white dark:bg-white dark:text-black shadow-xs ring-1 ring-black dark:ring-white"
+                              : "bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white"
+                          }`}
+                        >
+                          <span className={`w-2 h-2 rounded-full ${c.bg}`} />
+                          <span>{c.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Custom Photo URL Input */}
+                  <div className="space-y-1 pt-1">
+                    <input
+                      type="url"
+                      placeholder="Or paste your photo URL (https://...)"
+                      value={avatarUrl}
+                      onChange={(e) => setAvatarUrl(e.target.value)}
+                      className="w-full px-3 py-1.5 bg-white dark:bg-[#18181b] border border-neutral-200/80 dark:border-neutral-800/80 rounded-xl text-[11px] text-black dark:text-white placeholder-neutral-400 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-1">
                   <label className="text-neutral-600 dark:text-neutral-400 uppercase text-[10px] font-semibold">
                     Full Name *
@@ -415,8 +488,8 @@ export const AuthModal: React.FC = () => {
                   <input
                     type="email"
                     placeholder="student@seecs.nust.edu.pk"
-                    value={signupEmail}
-                    onChange={(e) => setSignupEmail(e.target.value)}
+                    value={eduEmail}
+                    onChange={(e) => setEduEmail(e.target.value)}
                     className="w-full px-4 py-2 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200/80 dark:border-neutral-800/80 rounded-full text-black dark:text-white text-xs focus:border-black dark:focus:border-white focus:outline-none"
                   />
                 </div>
