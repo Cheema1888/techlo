@@ -32,21 +32,21 @@ export const AuthModal: React.FC = () => {
     verifyStudentBadge,
   } = useAuth();
 
-  // Sign In State (Demands Phone Number & University)
-  const [loginPhone, setLoginPhone] = useState("+92 300 5551234");
+  // Clean Production Sign In State
+  const [loginPhone, setLoginPhone] = useState("");
   const [loginUniversity, setLoginUniversity] = useState(PAKISTANI_UNIVERSITIES[0].name);
-  const [loginPassword, setLoginPassword] = useState("student123");
+  const [loginPassword, setLoginPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [isSubmittingLogin, setIsSubmittingLogin] = useState(false);
 
-  // Sign Up State
+  // Clean Production Sign Up State
   const [fullName, setFullName] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("+92 3");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [selectedUniversity, setSelectedUniversity] = useState(PAKISTANI_UNIVERSITIES[0].name);
-  const [campusCity, setCampusCity] = useState("Islamabad / Rawalpindi");
+  const [campusCity, setCampusCity] = useState("");
   const [eduEmail, setEduEmail] = useState("");
   const [signupError, setSignupError] = useState("");
 
@@ -62,12 +62,17 @@ export const AuthModal: React.FC = () => {
     setLoginError("");
 
     if (!loginPhone || loginPhone.trim().length < 10) {
-      setLoginError("Please enter a valid mobile phone number (+92 3XX XXXXXXX)");
+      setLoginError("Please enter your mobile phone number (+92 3XX XXXXXXX)");
       return;
     }
 
     if (!loginUniversity) {
       setLoginError("Please select your university");
+      return;
+    }
+
+    if (!loginPassword) {
+      setLoginError("Please enter your password");
       return;
     }
 
@@ -77,11 +82,11 @@ export const AuthModal: React.FC = () => {
       const success = await loginWithEmailOrPhone(loginPhone.trim(), loginPassword, loginUniversity);
       setIsSubmittingLogin(false);
       if (!success) {
-        setLoginError("Login failed. Check your phone number or register a new account.");
+        setLoginError("Invalid credentials or account not found. Please register if you're new.");
       }
     } catch (err: any) {
       setIsSubmittingLogin(false);
-      setLoginError(err?.message || "Authentication failed. Try again.");
+      setLoginError(err?.message || "Authentication failed. Please try again.");
     }
   };
 
@@ -100,14 +105,19 @@ export const AuthModal: React.FC = () => {
       return;
     }
 
+    if (!signupPassword || signupPassword.length < 6) {
+      setSignupError("Password must be at least 6 characters");
+      return;
+    }
+
     setPendingSignupData({
       fullName: fullName.trim(),
       email: signupEmail.trim(),
       phoneNumber: formattedPhone,
       university: selectedUniversity,
-      campus: campusCity,
+      campus: campusCity.trim() || `${selectedUniversity} Main Campus`,
       eduEmail: eduEmail.trim(),
-      city: campusCity.split("/")[0].trim(),
+      city: campusCity.split("/")[0].trim() || "Islamabad",
     });
 
     try {
@@ -234,7 +244,7 @@ export const AuthModal: React.FC = () => {
               </div>
             </div>
 
-            {/* Login View (Demanding University and Phone Number) */}
+            {/* Login View */}
             {authModalView === "login" ? (
               <form onSubmit={handleLogin} className="p-6 space-y-3.5 text-xs">
                 {loginError && (
@@ -311,7 +321,7 @@ export const AuthModal: React.FC = () => {
                   disabled={isSubmittingLogin}
                   className="w-full py-3 bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black font-bold rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer mt-2 disabled:opacity-50"
                 >
-                  <span>{isSubmittingLogin ? "Signing in..." : "Sign In with University Account"}</span>
+                  <span>{isSubmittingLogin ? "Signing in..." : "Sign In to TECHLO"}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </form>
@@ -366,6 +376,19 @@ export const AuthModal: React.FC = () => {
                     placeholder="+92 300 1234567"
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
+                    className="w-full px-3 py-2 bg-neutral-50 dark:bg-[#121212] border border-neutral-200 dark:border-neutral-800 rounded-xl text-black dark:text-white text-xs focus:border-black dark:focus:border-white focus:outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-neutral-600 dark:text-neutral-400 uppercase text-[10px]">
+                    Campus / Department (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. SEECS H-12 Islamabad"
+                    value={campusCity}
+                    onChange={(e) => setCampusCity(e.target.value)}
                     className="w-full px-3 py-2 bg-neutral-50 dark:bg-[#121212] border border-neutral-200 dark:border-neutral-800 rounded-xl text-black dark:text-white text-xs focus:border-black dark:focus:border-white focus:outline-none"
                   />
                 </div>

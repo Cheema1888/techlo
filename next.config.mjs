@@ -2,6 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false, // Security: Remove X-Powered-By header
+  output: "standalone",
   images: {
     remotePatterns: [
       {

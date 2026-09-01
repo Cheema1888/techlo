@@ -51,7 +51,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [products, setProducts] = useState<ProductListing[]>([]);
   const [serviceRequests, setServiceRequests] = useState<ServiceQuoteRequest[]>([]);
 
-  // On initial mount, load real user session from localStorage and query SQLite API
+  // On mount, load real user session if already signed in, and query live SQLite database
   useEffect(() => {
     try {
       const storedUser = localStorage.getItem("techlo_user_session");
@@ -91,7 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
     } catch (err) {
-      console.error("Failed to refresh live database data:", err);
+      console.error("Failed to fetch live database records:", err);
     }
   };
 
@@ -122,11 +122,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(loggedInUser);
         localStorage.setItem("techlo_user_session", JSON.stringify(loggedInUser));
         closeAuthModal();
+        await refreshData();
         return true;
       }
       return false;
     } catch (e) {
-      console.error("Login request error:", e);
+      console.error("Login error:", e);
       return false;
     }
   };
@@ -147,7 +148,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setGeneratedOtp(json.data.otpCode);
         }
       }
-    } catch {}
+    } catch (e) {
+      console.error("SMS OTP dispatch error:", e);
+    }
 
     return code;
   };
@@ -168,34 +171,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(verifiedUser);
         localStorage.setItem("techlo_user_session", JSON.stringify(verifiedUser));
         closeAuthModal();
+        await refreshData();
         return true;
       }
-    } catch {}
-
-    const isValid = code === generatedOtp || code === "123456";
-    if (isValid && pendingSignupData) {
-      const newUser: UserProfile = {
-        id: "u-" + Date.now(),
-        email: pendingSignupData.email || `${pendingSignupData.phoneNumber}@student.pk`,
-        fullName: pendingSignupData.fullName,
-        phoneNumber: pendingSignupData.phoneNumber,
-        isPhoneVerified: true,
-        university: pendingSignupData.university,
-        campus: pendingSignupData.campus || `${pendingSignupData.university} Campus`,
-        isVerifiedStudent:
-          pendingSignupData.email.toLowerCase().endsWith(".edu.pk") ||
-          (pendingSignupData.eduEmail && pendingSignupData.eduEmail.includes(".edu.pk")) ||
-          false,
-        rating: 5.0,
-        dealsCompleted: 0,
-        avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
-        city: pendingSignupData.city || "Islamabad",
-      };
-
-      setUser(newUser);
-      localStorage.setItem("techlo_user_session", JSON.stringify(newUser));
-      closeAuthModal();
-      return true;
+    } catch (e) {
+      console.error("Verification error:", e);
     }
 
     return false;
@@ -254,7 +234,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
     } catch (e) {
-      console.error("Failed to post product to database:", e);
+      console.error("Failed to post product:", e);
     }
 
     const fallback: ProductListing = {
@@ -287,7 +267,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
     } catch (e) {
-      console.error("Failed to post service request to database:", e);
+      console.error("Failed to submit service request:", e);
     }
 
     const fallback: ServiceQuoteRequest = {

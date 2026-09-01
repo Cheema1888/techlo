@@ -55,10 +55,11 @@ export interface ProductListing {
   isNegotiable: boolean;
   images: string[];
   description: string;
-  specs: { [key: string]: string };
+  specs?: { [key: string]: string };
   seller: {
     id: string;
-    name: string;
+    name?: string;
+    fullName?: string;
     email?: string;
     university: string;
     campus: string;
@@ -66,12 +67,14 @@ export interface ProductListing {
     avatarUrl: string;
     isVerifiedStudent: boolean;
     rating: number;
-    phone: string;
+    dealsCompleted?: number;
+    phone?: string;
+    phoneNumber?: string;
   };
   quantityAvailable: number;
   status: "available" | "reserved" | "sold";
   createdAt: string;
-  viewsCount: number;
+  viewsCount?: number;
   location: string;
 }
 
@@ -90,12 +93,13 @@ export interface ServiceRequest {
   clientName: string;
   clientUniversity: string;
   clientPhone: string;
-  files: Array<{ name: string; size: string; type: string }>;
+  files?: Array<{ name: string; size: string; type: string; url?: string }>;
   estimatedCostPkr: number;
   status: "submitted" | "under_review" | "quoted" | "in_progress" | "completed" | "cancelled";
-  createdAt: string;
   deadline?: string;
-  customSpecs?: { [key: string]: string | number };
+  customSpecs?: Record<string, any>;
+  createdAt: string;
+  userId?: string;
 }
 
 export type ServiceQuoteRequest = ServiceRequest;
