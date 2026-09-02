@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { ComponentCategory, HardwareCondition } from "@/lib/types";
@@ -10,6 +10,13 @@ import {
   CheckCircle2,
   ArrowRight,
   User,
+  UploadCloud,
+  Camera,
+  Image as ImageIcon,
+  Loader2,
+  Star,
+  Sparkles,
+  X,
 } from "lucide-react";
 
 export default function SellHardwarePage() {
@@ -32,6 +39,12 @@ export default function SellHardwarePage() {
   // Images state
   const [images, setImages] = useState<string[]>([]);
   const [imageUrlInput, setImageUrlInput] = useState("");
+  const [isCompressing, setIsCompressing] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [showPresetFallback, setShowPresetFallback] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   // Specs state
   const [specs, setSpecs] = useState<Array<{ key: string; value: string }>>([]);
@@ -44,14 +57,88 @@ export default function SellHardwarePage() {
   // Quick photo presets for student convenience
   const photoPresets = [
     { label: "Microcontroller / Dev Board", url: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80" },
-    { label: "SBC / Single Board Computer", url: "https://images.unsplash.com/photo-1629654297299-c8506221ca97?auto=format&fit=crop&w=800&q=80" },
+    { label: "SBC / Raspberry Pi / Jetson", url: "https://images.unsplash.com/photo-1629654297299-c8506221ca97?auto=format&fit=crop&w=800&q=80" },
     { label: "Motors & Actuators", url: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80" },
     { label: "Sensor & Measurement IC", url: "https://images.unsplash.com/photo-1563770660941-20978e870e26?auto=format&fit=crop&w=800&q=80" },
   ];
 
-  const handleAddImage = (urlToAdd?: string) => {
+  // Client-side smart canvas image compression
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 1200;
+
+          if (width > height && width > maxDim) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else if (height > maxDim) {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            resolve(e.target?.result as string);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+          resolve(dataUrl);
+        };
+        img.onerror = () => resolve(e.target?.result as string);
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = (err) => reject(err);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleFilesSelected = async (files: FileList | File[]) => {
+    const validFiles = Array.from(files).filter((file) =>
+      file.type.startsWith("image/")
+    );
+    if (validFiles.length === 0) return;
+
+    if (images.length + validFiles.length > 8) {
+      alert("You can upload up to 8 photos per hardware listing.");
+    }
+
+    setIsCompressing(true);
+    try {
+      const compressPromises = validFiles.map((file) => compressImage(file));
+      const compressedUrls = await Promise.all(compressPromises);
+      setImages((prev) => [...prev, ...compressedUrls].slice(0, 8));
+    } catch (err) {
+      console.error("Error compressing image:", err);
+      alert("Failed to process some images. Please try again.");
+    } finally {
+      setIsCompressing(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFilesSelected(e.dataTransfer.files);
+    }
+  };
+
+  const handleAddImageUrl = (urlToAdd?: string) => {
     const target = urlToAdd || imageUrlInput.trim();
     if (target && !images.includes(target)) {
+      if (images.length >= 8) {
+        alert("Maximum 8 photos allowed.");
+        return;
+      }
       setImages([...images, target]);
       setImageUrlInput("");
     }
@@ -59,6 +146,13 @@ export default function SellHardwarePage() {
 
   const handleRemoveImage = (index: number) => {
     setImages(images.filter((_, i) => i !== index));
+  };
+
+  const handleSetCoverImage = (index: number) => {
+    if (index === 0) return;
+    const target = images[index];
+    const remaining = images.filter((_, i) => i !== index);
+    setImages([target, ...remaining]);
   };
 
   const handleAddSpec = () => {
@@ -211,46 +305,43 @@ export default function SellHardwarePage() {
                 </label>
                 <select
                   value={category}
-                  onChange={(e) => setCategory(e.target.value as any)}
-                  className="w-full px-3.5 py-2 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200/80 dark:border-neutral-800/80 rounded-xl text-black dark:text-white text-xs focus:outline-none cursor-pointer"
+                  onChange={(e) => setCategory(e.target.value as ComponentCategory)}
+                  className="w-full px-4 py-2 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200/80 dark:border-neutral-800/80 rounded-xl text-black dark:text-white text-xs focus:outline-none cursor-pointer"
                 >
-                  <option value="microcontrollers">Microcontrollers (ESP32, STM32, Arduino)</option>
-                  <option value="sensors">Sensors & IMUs (MPU6050, LiDAR, BMP280)</option>
-                  <option value="motors_actuators">Motors & Drivers (Stepper, Servo, BLDC)</option>
-                  <option value="power_bms">Power & LiPo (BMS, 18650, Buck Converters)</option>
-                  <option value="development_boards">SBCs & FPGAs (Raspberry Pi, Jetson, Zynq)</option>
-                  <option value="test_tools">Lab Tools (Multimeters, Logic Analyzers)</option>
-                  <option value="displays">Displays & OLEDs (Nextion, TFT, 16x2)</option>
-                  <option value="passives_ics">Passive Kits & ICs</option>
-                  <option value="robotics_chassis">Robotics Chassis & Hardware</option>
+                  <option value="microcontrollers">Microcontrollers & Dev Boards</option>
+                  <option value="sensors">Sensors & Modules</option>
+                  <option value="actuators_motors">Motors, Actuators & Drivers</option>
+                  <option value="wireless_iot">Wireless, IoT & RF</option>
+                  <option value="power_batteries">Power Supplies, Batteries & Regulators</option>
+                  <option value="passives_discrete">Passives, Diodes & ICs</option>
+                  <option value="lab_tools">Lab Equipment & Multimeters</option>
                 </select>
               </div>
 
               <div className="space-y-1">
                 <label className="text-neutral-600 dark:text-neutral-400 text-xs font-medium">
-                  Condition *
+                  Hardware Condition *
                 </label>
                 <select
                   value={condition}
-                  onChange={(e) => setCondition(e.target.value as any)}
-                  className="w-full px-3.5 py-2 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200/80 dark:border-neutral-800/80 rounded-xl text-black dark:text-white text-xs focus:outline-none cursor-pointer"
+                  onChange={(e) => setCondition(e.target.value as HardwareCondition)}
+                  className="w-full px-4 py-2 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200/80 dark:border-neutral-800/80 rounded-xl text-black dark:text-white text-xs focus:outline-none cursor-pointer"
                 >
-                  <option value="brand_new">Brand New (Unopened / Sealed)</option>
-                  <option value="fyp_tested">FYP Tested (Verified Working for Project)</option>
-                  <option value="gently_used">Gently Used (Minor cosmetic signs, full function)</option>
-                  <option value="desoldered_working">Desoldered Working (Cleanly harvested)</option>
-                  <option value="for_parts">For Parts / Repair (Needs troubleshooting)</option>
+                  <option value="brand_new">Brand New (Unopened / Antistatic Seal)</option>
+                  <option value="fyp_tested">FYP Tested (100% Working, Pins Intact)</option>
+                  <option value="bench_working">Bench Working (Light Use / Desoldered)</option>
+                  <option value="parts_only">For Parts / Repair</option>
                 </select>
               </div>
             </div>
 
             <div className="space-y-1">
               <label className="text-neutral-600 dark:text-neutral-400 text-xs font-medium">
-                Item Description
+                Detailed Description & Notes
               </label>
               <textarea
                 rows={3}
-                placeholder="Detail what pin headers are soldered, operating status, whether cables/accessories are included, and campus pickup details..."
+                placeholder="Mention working condition, firmware tested, pin header soldering status, or accessories included..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className="w-full px-4 py-2 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200/80 dark:border-neutral-800/80 rounded-xl text-black dark:text-white text-xs focus:border-black dark:focus:border-white focus:outline-none"
@@ -258,16 +349,16 @@ export default function SellHardwarePage() {
             </div>
           </div>
 
-          {/* 2. Pricing & Quantity */}
+          {/* 2. Pricing & Privacy */}
           <div className="p-6 bg-white dark:bg-[#121215] border border-neutral-200/80 dark:border-neutral-800/80 rounded-2xl space-y-4 shadow-xs">
             <h2 className="text-xs font-semibold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider">
-              2. Pricing & Quantity
+              2. Pricing & Privacy Options
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-1">
                 <label className="text-neutral-600 dark:text-neutral-400 text-xs font-medium">
-                  Selling Price (PKR) *
+                  Asking Price (PKR) *
                 </label>
                 <input
                   type="number"
@@ -275,7 +366,7 @@ export default function SellHardwarePage() {
                   placeholder="e.g. 1200"
                   value={pricePkr}
                   onChange={(e) => setPricePkr(e.target.value)}
-                  className="w-full px-4 py-2 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200/80 dark:border-neutral-800/80 rounded-xl text-black dark:text-white text-xs focus:border-black dark:focus:border-white focus:outline-none font-semibold"
+                  className="w-full px-4 py-2 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200/80 dark:border-neutral-800/80 rounded-xl text-black dark:text-white text-xs focus:border-black dark:focus:border-white focus:outline-none font-medium"
                 />
               </div>
 
@@ -338,64 +429,186 @@ export default function SellHardwarePage() {
             </div>
           </div>
 
-          {/* 3. Photos & Technical Specs */}
+          {/* 3. Component Photos Upload & Specifications */}
           <div className="p-6 bg-white dark:bg-[#121215] border border-neutral-200/80 dark:border-neutral-800/80 rounded-2xl space-y-4 shadow-xs">
-            <h2 className="text-xs font-semibold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider">
-              3. Photos & Specifications
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-semibold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider flex items-center gap-2">
+                <span>3. Component Photos & Specifications</span>
+                {images.length > 0 && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 font-normal">
+                    {images.length}/8 uploaded
+                  </span>
+                )}
+              </h2>
+            </div>
 
-            {/* Photo preset selectors */}
-            <div className="space-y-2">
-              <span className="text-xs text-neutral-400 block">Quick Category Photo Presets:</span>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {photoPresets.map((preset, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => handleAddImage(preset.url)}
-                    className="p-2 bg-neutral-50 dark:bg-neutral-900/50 hover:bg-neutral-100 dark:hover:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-800/80 rounded-xl text-xs text-left text-neutral-700 dark:text-neutral-300 transition-all cursor-pointer truncate"
-                  >
-                    + {preset.label}
-                  </button>
-                ))}
+            {/* Hidden file inputs */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={(e) => e.target.files && handleFilesSelected(e.target.files)}
+              accept="image/*"
+              multiple
+              className="hidden"
+            />
+            <input
+              type="file"
+              ref={cameraInputRef}
+              onChange={(e) => e.target.files && handleFilesSelected(e.target.files)}
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+            />
+
+            {/* Interactive Drag & Drop Upload Zone */}
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragOver(true);
+              }}
+              onDragLeave={() => setIsDragOver(false)}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={`p-6 sm:p-8 rounded-2xl border-2 border-dashed transition-all cursor-pointer text-center flex flex-col items-center justify-center space-y-3 ${
+                isDragOver
+                  ? "border-black dark:border-white bg-neutral-100 dark:bg-neutral-800"
+                  : "border-neutral-300 dark:border-neutral-700 bg-neutral-50/50 dark:bg-neutral-900/30 hover:border-black dark:hover:border-white hover:bg-neutral-50 dark:hover:bg-neutral-900/50"
+              }`}
+            >
+              <div className="w-12 h-12 rounded-2xl bg-white dark:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700 flex items-center justify-center shadow-xs">
+                {isCompressing ? (
+                  <Loader2 className="w-6 h-6 text-black dark:text-white animate-spin" />
+                ) : (
+                  <UploadCloud className="w-6 h-6 text-black dark:text-white" />
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <p className="font-semibold text-neutral-900 dark:text-neutral-100 text-xs sm:text-sm">
+                  {isCompressing ? "Optimizing & Compressing Photos..." : "Click to Upload Component Photos"}
+                </p>
+                <p className="text-[11px] text-neutral-500">
+                  Select pictures from your computer or phone camera roll (JPEG, PNG, WebP)
+                </p>
+              </div>
+
+              {/* Action Buttons Row inside Dropzone */}
+              <div className="flex items-center gap-2 pt-1" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-3 py-1.5 bg-black dark:bg-white text-white dark:text-black rounded-full font-semibold text-[11px] hover:opacity-90 transition-opacity flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <ImageIcon className="w-3.5 h-3.5" />
+                  <span>Choose Files</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="px-3 py-1.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 rounded-full font-semibold text-[11px] hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                  <span>Snap Photo</span>
+                </button>
               </div>
             </div>
 
-            {/* Custom URL Input */}
-            <div className="flex gap-2 pt-1">
-              <input
-                type="url"
-                placeholder="Or paste direct image URL (https://...)"
-                value={imageUrlInput}
-                onChange={(e) => setImageUrlInput(e.target.value)}
-                className="flex-1 px-4 py-2 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200/80 dark:border-neutral-800/80 rounded-xl text-black dark:text-white text-xs focus:outline-none"
-              />
-              <button
-                type="button"
-                onClick={() => handleAddImage()}
-                className="px-4 py-2 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-black dark:text-white rounded-xl text-xs font-semibold cursor-pointer"
-              >
-                Add Image
-              </button>
-            </div>
-
-            {/* Image Preview List */}
+            {/* Photo Previews Grid */}
             {images.length > 0 && (
-              <div className="flex flex-wrap gap-3 pt-2">
-                {images.map((img, i) => (
-                  <div key={i} className="relative group w-20 h-20 rounded-xl border border-neutral-200/80 dark:border-neutral-800/80 overflow-hidden">
-                    <img src={img} alt="Product" className="w-full h-full object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveImage(i)}
-                      className="absolute inset-0 bg-black/60 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all cursor-pointer"
+              <div className="space-y-2 pt-2">
+                <span className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 block">
+                  Uploaded Photos (First image is the cover thumbnail):
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {images.map((img, i) => (
+                    <div
+                      key={i}
+                      className="relative group aspect-square rounded-xl border border-neutral-200/80 dark:border-neutral-800/80 overflow-hidden bg-neutral-100 dark:bg-neutral-900 shadow-xs"
                     >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
+                      <img src={img} alt={`Upload ${i + 1}`} className="w-full h-full object-cover" />
+
+                      {/* Cover Badge */}
+                      {i === 0 ? (
+                        <div className="absolute top-1.5 left-1.5 z-10 px-1.5 py-0.5 rounded-md bg-black/80 dark:bg-white/90 text-white dark:text-black text-[9px] font-bold flex items-center gap-1 shadow-xs">
+                          <Star className="w-2.5 h-2.5 fill-current" />
+                          <span>Cover</span>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleSetCoverImage(i)}
+                          className="absolute top-1.5 left-1.5 z-10 px-1.5 py-0.5 rounded-md bg-black/60 hover:bg-black text-white text-[9px] font-medium opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                          title="Set as main cover photo"
+                        >
+                          Make Cover
+                        </button>
+                      )}
+
+                      {/* Delete Button */}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveImage(i)}
+                        className="absolute top-1.5 right-1.5 z-10 p-1 rounded-full bg-rose-600/90 text-white hover:bg-rose-700 opacity-90 sm:opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-xs"
+                        title="Delete photo"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
+
+            {/* Expandable Fallback: Category Stock Presets & Direct URL */}
+            <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800/80">
+              <button
+                type="button"
+                onClick={() => setShowPresetFallback(!showPresetFallback)}
+                className="text-[11px] text-neutral-500 hover:text-black dark:hover:text-white transition-colors cursor-pointer flex items-center gap-1"
+              >
+                <span>{showPresetFallback ? "▼ Hide stock presets and URL input" : "▶ Don't have a photo? Use stock preset or paste direct URL"}</span>
+              </button>
+
+              {showPresetFallback && (
+                <div className="space-y-3 pt-3">
+                  {/* Photo preset selectors */}
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] text-neutral-400 block uppercase font-medium">Quick Category Presets:</span>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {photoPresets.map((preset, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => handleAddImageUrl(preset.url)}
+                          className="p-2 bg-neutral-50 dark:bg-neutral-900/50 hover:bg-neutral-100 dark:hover:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-800/80 rounded-xl text-[11px] text-left text-neutral-700 dark:text-neutral-300 transition-all cursor-pointer truncate"
+                        >
+                          + {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Custom URL Input */}
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      placeholder="Or paste direct image URL (https://...)"
+                      value={imageUrlInput}
+                      onChange={(e) => setImageUrlInput(e.target.value)}
+                      className="flex-1 px-3 py-1.5 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200/80 dark:border-neutral-800/80 rounded-xl text-black dark:text-white text-xs focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleAddImageUrl()}
+                      className="px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-black dark:text-white rounded-xl text-xs font-semibold cursor-pointer"
+                    >
+                      Add URL
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Specifications Add */}
             <div className="space-y-2 pt-4 border-t border-neutral-100 dark:border-neutral-800/80">
