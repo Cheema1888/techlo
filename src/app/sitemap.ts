@@ -3,7 +3,7 @@ import { PAKISTANI_UNIVERSITIES } from "@/lib/mockData";
 import { BLOG_POSTS } from "@/lib/blogData";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.techlo.store";
+  const baseUrl = "https://www.techlo.store";
 
   // Static core routes
   const staticRoutes = [
