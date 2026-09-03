@@ -26,6 +26,9 @@ export const metadata: Metadata = {
     "UET",
     "NED",
   ],
+  verification: {
+    google: "MkJFEmDEZSC04IMAx0ipgvRdNQ1HtI1pKgee69EogYk",
+  },
 };
 
 export default function RootLayout({
