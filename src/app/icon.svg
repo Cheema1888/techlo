@@ -1,24 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
   <style>
-    .pi-monogram {
-      fill: #111827;
-    }
-    @media (prefers-color-scheme: dark) {
-      .pi-monogram {
-        fill: #FFFFFF;
-      }
+    rect { fill: #FFFFFF; }
+    @media (prefers-color-scheme: light) {
+      rect { fill: #0A0A0A; }
     }
   </style>
-  <g class="pi-monogram">
-    <!-- Full left vertical spine -->
-    <rect x="0" y="0" width="16" height="64" />
-    <!-- Top horizontal crossbar of P -->
-    <rect x="16" y="0" width="32" height="16" />
-    <!-- P upper right stem -->
-    <rect x="32" y="16" width="16" height="16" />
-    <!-- P middle bridge -->
-    <rect x="16" y="32" width="16" height="16" />
-    <!-- Lower right vertical stem -->
-    <rect x="48" y="32" width="16" height="32" />
-  </g>
+  <!-- Full left vertical spine -->
+  <rect x="0" y="0" width="16" height="64" />
+  <!-- Top horizontal crossbar of P -->
+  <rect x="16" y="0" width="32" height="16" />
+  <!-- P upper right stem -->
+  <rect x="32" y="16" width="16" height="16" />
+  <!-- P middle bridge -->
+  <rect x="16" y="32" width="16" height="16" />
+  <!-- Lower right vertical stem -->
+  <rect x="48" y="32" width="16" height="32" />
 </svg>
