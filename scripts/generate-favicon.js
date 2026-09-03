@@ -1,16 +1,34 @@
 const fs = require('fs');
 const path = require('path');
 
-// Create a 32x32 32-bit RGBA BMP/ICO matching user's exact uploaded image
+// Generate 32x32 32-bit RGBA ICO with transparent background
 const width = 32;
 const height = 32;
 const bpp = 32;
 
-// Colors in BGRA format
-const COLOR_TRANSPARENT = [0, 0, 0, 0];
-const COLOR_WHITE = [255, 255, 255, 255];
-const COLOR_BG = [10, 10, 10, 255];       // #0A0A0A
-const COLOR_SCREEN = [24, 24, 24, 255];   // #181818
+// Matrix: 4x4 Pi monogram
+const matrix = [
+  [1, 1, 1, 0],
+  [1, 0, 1, 0],
+  [1, 1, 0, 1],
+  [1, 0, 0, 1],
+];
+
+// Map 32x32 pixels to 4x4 grid (centered with 2px padding, 7px per cell)
+const cellSize = 7;
+const pad = 2; // 2 + 7*4 = 30 -> 1px extra on right/bottom
+
+function isGlyph(x, y) {
+  if (x < pad || x >= pad + 4 * cellSize || y < pad || y >= pad + 4 * cellSize) {
+    return false;
+  }
+  const col = Math.floor((x - pad) / cellSize);
+  const row = Math.floor((y - pad) / cellSize);
+  if (row >= 0 && row < 4 && col >= 0 && col < 4) {
+    return matrix[row][col] === 1;
+  }
+  return false;
+}
 
 const pixelData = Buffer.alloc(width * height * 4);
 
@@ -19,60 +37,42 @@ for (let y = 0; y < height; y++) {
   const row = height - 1 - y;
   for (let x = 0; x < width; x++) {
     const idx = (row * width + x) * 4;
-    const dx = x - 15.5;
-    const dy = y - 15.5;
-    const dist = Math.sqrt(dx * dx + dy * dy);
 
-    let color = COLOR_TRANSPARENT;
-
-    if (dist <= 15.5) {
-      // Outer White Ring
-      if (dist >= 11.5 && dist <= 15.5) {
-        color = COLOR_WHITE;
-      } else {
-        // Inner Black Bezel
-        color = COLOR_BG;
-
-        // Robot Face Screen Box (rounded rect inside)
-        if (x >= 7 && x <= 24 && y >= 8 && y <= 23) {
-          // Check corner rounding
-          const cornerDistances = [
-            Math.hypot(x - 10, y - 11), // top-left
-            Math.hypot(x - 21, y - 11), // top-right
-            Math.hypot(x - 10, y - 20), // bottom-left
-            Math.hypot(x - 21, y - 20), // bottom-right
-          ];
-          const isCorner = 
-            (x < 10 && y < 11 && cornerDistances[0] > 3) ||
-            (x > 21 && y < 11 && cornerDistances[1] > 3) ||
-            (x < 10 && y > 20 && cornerDistances[2] > 3) ||
-            (x > 21 && y > 20 && cornerDistances[3] > 3);
-
-          if (!isCorner) {
-            color = COLOR_SCREEN;
+    if (isGlyph(x, y)) {
+      // Solid White fill
+      pixelData[idx] = 255;     // B
+      pixelData[idx + 1] = 255; // G
+      pixelData[idx + 2] = 255; // R
+      pixelData[idx + 3] = 255; // A
+    } else {
+      // Check if neighboring pixel is glyph (subtle 1px dark border for light tab visibility)
+      let isNeighbor = false;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx !== 0 || dy !== 0) {
+            if (isGlyph(x + dx, y + dy)) {
+              isNeighbor = true;
+              break;
+            }
           }
         }
+        if (isNeighbor) break;
+      }
 
-        // Two White Square Eyes
-        const isLeftEye = (x >= 10 && x <= 13) && (y >= 12 && y <= 15);
-        const isRightEye = (x >= 18 && x <= 21) && (y >= 12 && y <= 15);
-        if (isLeftEye || isRightEye) {
-          color = COLOR_WHITE;
-        }
-
-        // Smile
-        const isSmile = (y === 19 && (x >= 13 && x <= 18)) || 
-                        (y === 18 && (x === 12 || x === 19));
-        if (isSmile) {
-          color = COLOR_WHITE;
-        }
+      if (isNeighbor) {
+        // Crisp dark outline (rgba: 15, 23, 42, 0.85)
+        pixelData[idx] = 42;      // B
+        pixelData[idx + 1] = 23;  // G
+        pixelData[idx + 2] = 15;  // R
+        pixelData[idx + 3] = 216; // A
+      } else {
+        // Completely transparent
+        pixelData[idx] = 0;
+        pixelData[idx + 1] = 0;
+        pixelData[idx + 2] = 0;
+        pixelData[idx + 3] = 0;
       }
     }
-
-    pixelData[idx] = color[0];     // B
-    pixelData[idx + 1] = color[1]; // G
-    pixelData[idx + 2] = color[2]; // R
-    pixelData[idx + 3] = color[3]; // A
   }
 }
 
@@ -81,39 +81,39 @@ const maskData = Buffer.alloc(height * 4, 0);
 
 // BITMAPINFOHEADER (40 bytes)
 const bih = Buffer.alloc(40);
-bih.writeUInt32LE(40, 0);         // biSize
-bih.writeInt32LE(width, 4);       // biWidth
-bih.writeInt32LE(height * 2, 8);   // biHeight (doubled for ICO mask)
-bih.writeUInt16LE(1, 12);         // biPlanes
-bih.writeUInt16LE(bpp, 14);       // biBitCount
-bih.writeUInt32LE(0, 16);         // biCompression (BI_RGB)
-bih.writeUInt32LE(pixelData.length + maskData.length, 20); // biSizeImage
-bih.writeInt32LE(0, 24);          // biXPelsPerMeter
-bih.writeInt32LE(0, 28);          // biYPelsPerMeter
-bih.writeUInt32LE(0, 32);         // biClrUsed
-bih.writeUInt32LE(0, 36);         // biClrImportant
+bih.writeUInt32LE(40, 0);
+bih.writeInt32LE(width, 4);
+bih.writeInt32LE(height * 2, 8); // doubled for ICO
+bih.writeUInt16LE(1, 12);
+bih.writeUInt16LE(bpp, 14);
+bih.writeUInt32LE(0, 16);
+bih.writeUInt32LE(pixelData.length + maskData.length, 20);
+bih.writeInt32LE(0, 24);
+bih.writeInt32LE(0, 28);
+bih.writeUInt32LE(0, 32);
+bih.writeUInt32LE(0, 36);
 
 const imageData = Buffer.concat([bih, pixelData, maskData]);
 
 // ICONDIR (6 bytes)
 const iconDir = Buffer.alloc(6);
-iconDir.writeUInt16LE(0, 0); // Reserved
-iconDir.writeUInt16LE(1, 2); // Type 1 = ICO
-iconDir.writeUInt16LE(1, 4); // Count 1
+iconDir.writeUInt16LE(0, 0);
+iconDir.writeUInt16LE(1, 2);
+iconDir.writeUInt16LE(1, 4);
 
 // ICONDIRENTRY (16 bytes)
 const iconEntry = Buffer.alloc(16);
-iconEntry.writeUInt8(width, 0);       // Width
-iconEntry.writeUInt8(height, 1);      // Height
-iconEntry.writeUInt8(0, 2);           // Color count
-iconEntry.writeUInt8(0, 3);           // Reserved
-iconEntry.writeUInt16LE(1, 4);        // Color planes
-iconEntry.writeUInt16LE(bpp, 6);      // Bits per pixel
-iconEntry.writeUInt32LE(imageData.length, 8); // Size of image data
-iconEntry.writeUInt32LE(6 + 16, 12);  // Offset of image data
+iconEntry.writeUInt8(width, 0);
+iconEntry.writeUInt8(height, 1);
+iconEntry.writeUInt8(0, 2);
+iconEntry.writeUInt8(0, 3);
+iconEntry.writeUInt16LE(1, 4);
+iconEntry.writeUInt16LE(bpp, 6);
+iconEntry.writeUInt32LE(imageData.length, 8);
+iconEntry.writeUInt32LE(6 + 16, 12);
 
 const icoBuffer = Buffer.concat([iconDir, iconEntry, imageData]);
 const appPath = path.join(__dirname, '../src/app/favicon.ico');
 
 fs.writeFileSync(appPath, icoBuffer);
-console.log('Successfully generated updated black & white favicon.ico at src/app/favicon.ico');
+console.log('Successfully generated transparent background Pi monogram favicon.ico at src/app/favicon.ico');
