@@ -20,101 +20,73 @@ export const TechloLogo: React.FC<TechloLogoProps> = ({
   const isDark = theme === "dark";
 
   const heightMap = {
-    sm: iconOnly ? 26 : 26,
-    md: iconOnly ? 34 : 34,
-    lg: iconOnly ? 44 : 44,
-    xl: iconOnly ? 56 : 56,
+    sm: iconOnly ? 24 : 24,
+    md: iconOnly ? 30 : 30,
+    lg: iconOnly ? 38 : 38,
+    xl: iconOnly ? 48 : 48,
   };
 
   const currentHeight = heightMap[size];
 
-  // Robot Icon Component
-  const RobotIcon = ({ s = 34 }: { s?: number }) => (
+  // Geometric Pi Monogram Icon Component (Transparent Background)
+  const PiMonogramIcon = ({ s = 30 }: { s?: number }) => (
     <svg
       width={s}
       height={s}
-      viewBox="0 0 100 100"
+      viewBox="0 0 64 64"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className="inline-block flex-shrink-0 align-middle"
+      className="inline-block flex-shrink-0 align-middle transition-colors"
     >
-      {/* Outer Ring */}
-      <circle cx="50" cy="50" r="46" fill={isDark ? "#FFFFFF" : "#0A0A0A"} />
-
-      {/* Inner Screen Bezel */}
-      <circle cx="50" cy="50" r="37" fill={isDark ? "#0A0A0A" : "#FFFFFF"} />
-
-      {/* Robot Face Screen Container */}
-      <rect
-        x="22"
-        y="26"
-        width="56"
-        height="48"
-        rx="12"
-        fill={isDark ? "#141414" : "#F5F5F5"}
-        stroke={isDark ? "#262626" : "#E5E5E5"}
-        strokeWidth="2"
-      />
-
-      {/* Robot Eyes (Pixel / Square Style) */}
-      <rect x="32" y="40" width="11" height="11" rx="2" fill={isDark ? "#FFFFFF" : "#0A0A0A"} />
-      <rect x="57" y="40" width="11" height="11" rx="2" fill={isDark ? "#FFFFFF" : "#0A0A0A"} />
-
-      {/* Cute Smile */}
-      <path
-        d="M44 60 C47 63, 53 63, 56 60"
-        stroke={isDark ? "#FFFFFF" : "#0A0A0A"}
-        strokeWidth="3.5"
-        strokeLinecap="round"
-      />
+      <g fill={isDark ? "#FFFFFF" : "#0A0A0A"}>
+        {/* Full left vertical spine */}
+        <rect x="0" y="0" width="16" height="64" />
+        {/* Top horizontal crossbar */}
+        <rect x="16" y="0" width="32" height="16" />
+        {/* Upper right stem */}
+        <rect x="32" y="16" width="16" height="16" />
+        {/* Middle bridge */}
+        <rect x="16" y="32" width="16" height="16" />
+        {/* Lower right stem */}
+        <rect x="48" y="32" width="16" height="32" />
+      </g>
     </svg>
   );
 
   if (iconOnly) {
-    return <RobotIcon s={currentHeight} />;
+    return <PiMonogramIcon s={currentHeight} />;
   }
 
   return (
     <div className={`inline-flex flex-col items-start select-none ${className}`}>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2">
+        <PiMonogramIcon
+          s={
+            size === "sm"
+              ? 20
+              : size === "md"
+              ? 26
+              : size === "lg"
+              ? 34
+              : 44
+          }
+        />
         <span
           className="font-mono font-black tracking-tighter leading-none text-black dark:text-white transition-colors"
           style={{
             fontSize:
               size === "sm"
-                ? "1.3rem"
+                ? "1.25rem"
                 : size === "md"
-                ? "1.65rem"
+                ? "1.55rem"
                 : size === "lg"
-                ? "2.2rem"
-                : "3rem",
-            letterSpacing: "-0.05em",
+                ? "2.1rem"
+                : "2.8rem",
+            letterSpacing: "-0.04em",
           }}
         >
-          TECHL
+          TECHLO
         </span>
-        <div
-          style={{
-            transform:
-              size === "sm"
-                ? "translateY(-1px)"
-                : size === "md"
-                ? "translateY(-1px)"
-                : "translateY(-2px)",
-          }}
-        >
-          <RobotIcon
-            s={
-              size === "sm"
-                ? 22
-                : size === "md"
-                ? 28
-                : size === "lg"
-                ? 36
-                : 48
-            }
-          />
-        </div>
       </div>
       {showTagline && (
         <span
@@ -129,8 +101,8 @@ export const TechloLogo: React.FC<TechloLogoProps> = ({
                 ? "0.8rem"
                 : "1rem",
             letterSpacing: "0.12em",
-            marginTop: size === "sm" ? "2px" : "3px",
-            alignSelf: "flex-end",
+            marginTop: size === "sm" ? "3px" : "4px",
+            paddingLeft: size === "sm" ? "26px" : "34px",
           }}
         >
           a product of <span className="font-bold text-black dark:text-white">arix</span>
