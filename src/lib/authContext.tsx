@@ -160,12 +160,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const verifyOtp = async (code: string): Promise<boolean> => {
     const phoneNumber = pendingSignupData?.phoneNumber || user?.phoneNumber || "";
+    const email = pendingSignupData?.email || user?.email || "";
 
     try {
       const res = await fetch("/api/auth/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phoneNumber, otpCode: code }),
+        body: JSON.stringify({ phoneNumber, email, otpCode: code }),
       });
 
       const json = await res.json();

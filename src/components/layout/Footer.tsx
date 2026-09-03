@@ -110,8 +110,13 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
-                <Link href="/universities" className="text-black dark:text-white font-medium hover:underline">
+                <Link href="/universities" className="hover:text-black dark:hover:text-white transition-colors">
                   All 20+ Campuses →
+                </Link>
+              </li>
+              <li>
+                <Link href="/blog" className="text-black dark:text-white font-medium hover:underline">
+                  Hardware & FYP Blog ↗
                 </Link>
               </li>
             </ul>

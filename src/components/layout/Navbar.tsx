@@ -42,6 +42,7 @@ export const Navbar: React.FC = () => {
     { name: "Marketplace", href: "/marketplace" },
     { name: "PCB & CAD Services", href: "/services" },
     { name: "Universities", href: "/universities" },
+    { name: "Blog", href: "/blog" },
     { name: "Live Chat", href: "/chat" },
   ];
 

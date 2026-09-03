@@ -107,13 +107,19 @@ export const AuthModal: React.FC = () => {
     setSignupError("");
 
     const formattedPhone = phoneNumber.trim();
-    if (formattedPhone.length < 10) {
-      setSignupError("Please provide a valid Pakistani mobile number (+92 3XX XXXXXXX)");
+    if (!formattedPhone || formattedPhone.length < 10) {
+      setSignupError("Mobile Phone is compulsory (+92 3XX XXXXXXX)");
       return;
     }
 
     if (!fullName.trim()) {
       setSignupError("Full Name is required");
+      return;
+    }
+
+    const trimmedEmail = (signupEmail || eduEmail).trim().toLowerCase();
+    if (!trimmedEmail || !trimmedEmail.includes("@")) {
+      setSignupError("Valid Email is compulsory for verification");
       return;
     }
 
@@ -124,11 +130,11 @@ export const AuthModal: React.FC = () => {
 
     setPendingSignupData({
       fullName: fullName.trim(),
-      email: signupEmail.trim(),
+      email: trimmedEmail,
       phoneNumber: formattedPhone,
       university: selectedUniversity,
       campus: campusCity.trim() || `${selectedUniversity} Main Campus`,
-      eduEmail: eduEmail.trim(),
+      eduEmail: eduEmail.trim() || trimmedEmail,
       city: campusCity.split("/")[0].trim() || "Islamabad",
       avatarUrl: avatarUrl.trim() || undefined,
       avatarColor: avatarColor || "cyan",
@@ -138,7 +144,7 @@ export const AuthModal: React.FC = () => {
       await sendPhoneOtp(formattedPhone);
       setAuthModalView("otp");
     } catch (err: any) {
-      setSignupError("Failed to dispatch SMS OTP. Try again.");
+      setSignupError("Failed to dispatch verification code. Try again.");
     }
   };
 
@@ -455,9 +461,12 @@ export const AuthModal: React.FC = () => {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-neutral-600 dark:text-neutral-400 uppercase text-[10px] font-semibold">
-                    Mobile Phone (for SMS OTP) *
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-neutral-700 dark:text-neutral-300 uppercase text-[10px] font-bold">
+                      Mobile Phone (Compulsory) *
+                    </label>
+                    <span className="text-[9px] text-neutral-500 font-sans">Campus trade & contact</span>
+                  </div>
                   <input
                     type="tel"
                     required
@@ -469,27 +478,34 @@ export const AuthModal: React.FC = () => {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-neutral-600 dark:text-neutral-400 uppercase text-[10px]">
-                    Campus / Department (Optional)
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-neutral-700 dark:text-neutral-300 uppercase text-[10px] font-bold">
+                      Email Address (Compulsory) *
+                    </label>
+                    <span className="text-[9px] text-neutral-500 font-sans">Free Email OTP verification</span>
+                  </div>
                   <input
-                    type="text"
-                    placeholder="e.g. SEECS H-12 Islamabad"
-                    value={campusCity}
-                    onChange={(e) => setCampusCity(e.target.value)}
+                    type="email"
+                    required
+                    placeholder="student@university.edu.pk or yourname@gmail.com"
+                    value={signupEmail}
+                    onChange={(e) => {
+                      setSignupEmail(e.target.value);
+                      setEduEmail(e.target.value);
+                    }}
                     className="w-full px-4 py-2 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200/80 dark:border-neutral-800/80 rounded-full text-black dark:text-white text-xs focus:border-black dark:focus:border-white focus:outline-none"
                   />
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-neutral-600 dark:text-neutral-400 uppercase text-[10px]">
-                    University Email / Student ID (.edu.pk optional)
+                    Campus / Department (Optional)
                   </label>
                   <input
-                    type="email"
-                    placeholder="student@seecs.nust.edu.pk"
-                    value={eduEmail}
-                    onChange={(e) => setEduEmail(e.target.value)}
+                    type="text"
+                    placeholder="e.g. SEECS H-12 Islamabad / Electrical Eng."
+                    value={campusCity}
+                    onChange={(e) => setCampusCity(e.target.value)}
                     className="w-full px-4 py-2 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200/80 dark:border-neutral-800/80 rounded-full text-black dark:text-white text-xs focus:border-black dark:focus:border-white focus:outline-none"
                   />
                 </div>

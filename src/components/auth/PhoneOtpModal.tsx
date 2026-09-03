@@ -14,6 +14,7 @@ export const PhoneOtpModal: React.FC = () => {
   } = useAuth();
 
   const phoneNumber = pendingSignupData?.phoneNumber || user?.phoneNumber || "";
+  const userEmail = pendingSignupData?.email || user?.email || "";
   const [digits, setDigits] = useState<string[]>(["", "", "", "", "", ""]);
   const [error, setError] = useState<string>("");
   const [timer, setTimer] = useState<number>(60);
@@ -101,10 +102,15 @@ export const PhoneOtpModal: React.FC = () => {
         <div className="w-12 h-12 rounded-xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-black dark:text-white flex items-center justify-center mx-auto mb-2">
           <Smartphone className="w-6 h-6" />
         </div>
-        <h3 className="text-xl font-bold text-black dark:text-white tracking-tight">Verify Phone Number</h3>
+        <h3 className="text-xl font-bold text-black dark:text-white tracking-tight">Verify Your Account</h3>
         <p className="text-xs text-neutral-500 dark:text-neutral-400">
-          Enter 6-digit security code sent to <span className="text-black dark:text-white font-bold">{phoneNumber}</span>
+          Enter 6-digit code sent to <span className="text-black dark:text-white font-bold">{userEmail || "your email"}</span>
         </p>
+        {phoneNumber && (
+          <p className="text-[11px] text-neutral-400 dark:text-neutral-500">
+            Registered Mobile: <span className="font-mono text-neutral-600 dark:text-neutral-300">{phoneNumber}</span>
+          </p>
+        )}
       </div>
 
       {/* 6 Digit Inputs */}
