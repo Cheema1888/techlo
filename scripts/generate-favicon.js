@@ -1,17 +1,16 @@
 const fs = require('fs');
 const path = require('path');
 
-// Create a 32x32 32-bit RGBA BMP/ICO
+// Create a 32x32 32-bit RGBA BMP/ICO matching user's exact uploaded image
 const width = 32;
 const height = 32;
 const bpp = 32;
 
 // Colors in BGRA format
 const COLOR_TRANSPARENT = [0, 0, 0, 0];
-const COLOR_BG = [17, 17, 17, 255];          // #111111 dark
-const COLOR_CYAN = [254, 242, 0, 255];        // #00F2FE cyan (BGRA: B=254, G=242, R=0)
-const COLOR_BLUE = [254, 172, 79, 255];       // #4FACFE blue (BGRA: B=254, G=172, R=79)
 const COLOR_WHITE = [255, 255, 255, 255];
+const COLOR_BG = [10, 10, 10, 255];       // #0A0A0A
+const COLOR_SCREEN = [24, 24, 24, 255];   // #181818
 
 const pixelData = Buffer.alloc(width * height * 4);
 
@@ -26,30 +25,46 @@ for (let y = 0; y < height; y++) {
 
     let color = COLOR_TRANSPARENT;
 
-    if (dist <= 15) {
-      // Rounded circle base
-      if (dist >= 13 && dist <= 15) {
-        color = COLOR_CYAN; // Outer ring glow
+    if (dist <= 15.5) {
+      // Outer White Ring
+      if (dist >= 11.5 && dist <= 15.5) {
+        color = COLOR_WHITE;
       } else {
-        color = COLOR_BG; // Dark background
-      }
+        // Inner Black Bezel
+        color = COLOR_BG;
 
-      // Robot Head outline (10 <= x <= 21, 10 <= y <= 21)
-      if (x >= 8 && x <= 23 && y >= 9 && y <= 23) {
-        // Antenna
-        if (x >= 15 && x <= 16 && y >= 5 && y <= 8) {
-          color = COLOR_CYAN;
+        // Robot Face Screen Box (rounded rect inside)
+        if (x >= 7 && x <= 24 && y >= 8 && y <= 23) {
+          // Check corner rounding
+          const cornerDistances = [
+            Math.hypot(x - 10, y - 11), // top-left
+            Math.hypot(x - 21, y - 11), // top-right
+            Math.hypot(x - 10, y - 20), // bottom-left
+            Math.hypot(x - 21, y - 20), // bottom-right
+          ];
+          const isCorner = 
+            (x < 10 && y < 11 && cornerDistances[0] > 3) ||
+            (x > 21 && y < 11 && cornerDistances[1] > 3) ||
+            (x < 10 && y > 20 && cornerDistances[2] > 3) ||
+            (x > 21 && y > 20 && cornerDistances[3] > 3);
+
+          if (!isCorner) {
+            color = COLOR_SCREEN;
+          }
         }
 
-        // Eyes (pixel dots at (11,14), (12,14), (19,14), (20,14))
-        if ((x >= 11 && x <= 13 && y >= 13 && y <= 15) || 
-            (x >= 18 && x <= 20 && y >= 13 && y <= 15)) {
-          color = COLOR_CYAN;
+        // Two White Square Eyes
+        const isLeftEye = (x >= 10 && x <= 13) && (y >= 12 && y <= 15);
+        const isRightEye = (x >= 18 && x <= 21) && (y >= 12 && y <= 15);
+        if (isLeftEye || isRightEye) {
+          color = COLOR_WHITE;
         }
 
-        // Smile at y=19 (x from 13 to 18)
-        if (y === 19 && x >= 13 && x <= 18) {
-          color = COLOR_CYAN;
+        // Smile
+        const isSmile = (y === 19 && (x >= 13 && x <= 18)) || 
+                        (y === 18 && (x === 12 || x === 19));
+        if (isSmile) {
+          color = COLOR_WHITE;
         }
       }
     }
@@ -98,11 +113,7 @@ iconEntry.writeUInt32LE(imageData.length, 8); // Size of image data
 iconEntry.writeUInt32LE(6 + 16, 12);  // Offset of image data
 
 const icoBuffer = Buffer.concat([iconDir, iconEntry, imageData]);
-
-const pubPath = path.join(__dirname, '../public/favicon.ico');
 const appPath = path.join(__dirname, '../src/app/favicon.ico');
 
-fs.writeFileSync(pubPath, icoBuffer);
 fs.writeFileSync(appPath, icoBuffer);
-
-console.log('Successfully generated favicon.ico for public/ and src/app/');
+console.log('Successfully generated updated black & white favicon.ico at src/app/favicon.ico');
