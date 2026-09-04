@@ -100,13 +100,17 @@ function ChatContent() {
   }, [user?.id, isAuthenticated, targetSellerId, targetProductId]);
 
   // 2. Fetch messages when active conversation changes
-  const loadMessages = async (convoId: string) => {
+  const loadMessages = async (convoId: string, shouldScroll = false) => {
     if (!convoId) return;
     try {
       const res = await fetch(`/api/chat/messages?conversationId=${convoId}`);
       const json = await res.json();
       if (json.success && json.data) {
         setMessages(json.data);
+        if (shouldScroll) {
+          setTimeout(scrollContainerToBottom, 60);
+          setTimeout(scrollContainerToBottom, 200);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -116,9 +120,9 @@ function ChatContent() {
   useEffect(() => {
     if (activeConversation?.id) {
       setMessages([]);
-      loadMessages(activeConversation.id);
+      loadMessages(activeConversation.id, true);
       const interval = setInterval(() => {
-        loadMessages(activeConversation.id);
+        loadMessages(activeConversation.id, false);
       }, 5000); // Polling for messages without scroll jumping
       return () => clearInterval(interval);
     }
@@ -223,9 +227,9 @@ function ChatContent() {
       {/* Container Card */}
       <div className="bg-white dark:bg-[#121215] border border-neutral-200/80 dark:border-neutral-800/80 rounded-3xl overflow-hidden shadow-sm grid grid-cols-1 md:grid-cols-12 h-[calc(100vh-140px)] min-h-[550px]">
         {/* Left Column: Conversations List (4 cols) */}
-        <div className={`md:col-span-4 border-r border-neutral-200/80 dark:border-neutral-800/80 flex flex-col h-full bg-neutral-50/50 dark:bg-neutral-950/20 ${activeConversation ? "hidden md:flex" : "flex"}`}>
+        <div className={`md:col-span-4 border-r border-neutral-200/80 dark:border-neutral-800/80 flex flex-col h-full min-h-0 overflow-hidden bg-neutral-50/50 dark:bg-neutral-950/20 ${activeConversation ? "hidden md:flex" : "flex"}`}>
           {/* Header */}
-          <div className="p-4 border-b border-neutral-200/80 dark:border-neutral-800/80 space-y-3">
+          <div className="flex-shrink-0 p-4 border-b border-neutral-200/80 dark:border-neutral-800/80 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <MessageCircle className="w-4 h-4 text-black dark:text-white" />
@@ -255,7 +259,7 @@ function ChatContent() {
           </div>
 
           {/* Conversation Items */}
-          <div className="flex-1 overflow-y-auto divide-y divide-neutral-100 dark:divide-neutral-900">
+          <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-neutral-100 dark:divide-neutral-900">
             {filteredConversations.length > 0 ? (
               filteredConversations.map((convo) => {
                 const isSelected = activeConversation?.id === convo.id;
@@ -318,11 +322,11 @@ function ChatContent() {
         </div>
 
         {/* Right Column: Active Chat Room (8 cols) */}
-        <div className={`md:col-span-8 flex flex-col h-full bg-white dark:bg-[#121215] ${!activeConversation ? "hidden md:flex items-center justify-center" : "flex"}`}>
+        <div className={`md:col-span-8 flex flex-col h-full min-h-0 overflow-hidden bg-white dark:bg-[#121215] ${!activeConversation ? "hidden md:flex items-center justify-center" : "flex"}`}>
           {activeConversation && currentOtherUser ? (
             <>
               {/* Header */}
-              <div className="p-4 border-b border-neutral-200/80 dark:border-neutral-800/80 flex items-center justify-between gap-3">
+              <div className="flex-shrink-0 p-4 border-b border-neutral-200/80 dark:border-neutral-800/80 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => setActiveConversation(null)}
@@ -370,7 +374,7 @@ function ChatContent() {
               </div>
 
               {/* 14-Day History Retention Banner */}
-              <div className="bg-amber-500/10 dark:bg-amber-500/15 border-b border-amber-500/20 px-4 py-2 flex items-center justify-between gap-3 text-[11px] text-amber-900 dark:text-amber-200">
+              <div className="flex-shrink-0 bg-amber-500/10 dark:bg-amber-500/15 border-b border-amber-500/20 px-4 py-2 flex items-center justify-between gap-3 text-[11px] text-amber-900 dark:text-amber-200">
                 <div className="flex items-center gap-2">
                   <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
                   <span>
@@ -385,7 +389,7 @@ function ChatContent() {
               {/* Messages Scroll Area */}
               <div
                 ref={messagesContainerRef}
-                className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4"
+                className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-4"
               >
                 <div className="text-center pb-2">
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800/80 text-[10px] text-neutral-500 dark:text-neutral-400 border border-neutral-200/60 dark:border-neutral-800">
@@ -445,7 +449,7 @@ function ChatContent() {
                 </div>
 
               {/* Input Area */}
-              <div className="p-3 sm:p-4 border-t border-neutral-200/80 dark:border-neutral-800/80 bg-white dark:bg-[#121215]">
+              <div className="flex-shrink-0 p-3 sm:p-4 border-t border-neutral-200/80 dark:border-neutral-800/80 bg-white dark:bg-[#121215]">
                 {sendError && (
                   <p className="mb-2 px-2 text-[11px] text-rose-600 dark:text-rose-400" role="alert">
                     {sendError}
