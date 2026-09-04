@@ -16,7 +16,6 @@ import {
   ShieldCheck,
   User,
   Clock,
-  ArrowDown,
 } from "lucide-react";
 
 function ChatContent() {
@@ -34,24 +33,13 @@ function ChatContent() {
   const [sendError, setSendError] = useState("");
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isAtBottom, setIsAtBottom] = useState(true);
 
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
+  const scrollContainerToBottom = () => {
     if (messagesContainerRef.current) {
-      const el = messagesContainerRef.current;
-      if (behavior === "auto") {
-        el.scrollTop = el.scrollHeight;
-      } else {
-        el.scrollTo({
-          top: el.scrollHeight,
-          behavior: "smooth",
-        });
-      }
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
-    messagesEndRef.current?.scrollIntoView({ behavior });
   };
 
   // 1. Fetch or initialize conversations
@@ -112,17 +100,13 @@ function ChatContent() {
   }, [user?.id, isAuthenticated, targetSellerId, targetProductId]);
 
   // 2. Fetch messages when active conversation changes
-  const loadMessages = async (convoId: string, isInitial = false) => {
+  const loadMessages = async (convoId: string) => {
     if (!convoId) return;
     try {
       const res = await fetch(`/api/chat/messages?conversationId=${convoId}`);
       const json = await res.json();
       if (json.success && json.data) {
         setMessages(json.data);
-        if (isInitial || isAtBottom) {
-          setTimeout(() => scrollToBottom(isInitial ? "auto" : "smooth"), 30);
-          setTimeout(() => scrollToBottom("auto"), 200);
-        }
       }
     } catch (e) {
       console.error(e);
@@ -132,27 +116,13 @@ function ChatContent() {
   useEffect(() => {
     if (activeConversation?.id) {
       setMessages([]);
-      setIsAtBottom(true);
-      loadMessages(activeConversation.id, true);
+      loadMessages(activeConversation.id);
       const interval = setInterval(() => {
-        loadMessages(activeConversation.id, false);
-      }, 4000); // Polling for messages
+        loadMessages(activeConversation.id);
+      }, 5000); // Polling for messages without scroll jumping
       return () => clearInterval(interval);
     }
   }, [activeConversation?.id]);
-
-  useEffect(() => {
-    if (isAtBottom) {
-      scrollToBottom("smooth");
-    }
-  }, [messages.length, isAtBottom]);
-
-  const handleScroll = () => {
-    if (!messagesContainerRef.current) return;
-    const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
-    const distanceToBottom = scrollHeight - scrollTop - clientHeight;
-    setIsAtBottom(distanceToBottom < 80);
-  };
 
   // 3. Send message handler
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -163,8 +133,7 @@ function ChatContent() {
     setSendError("");
     setInputText("");
     setIsSending(true);
-    setIsAtBottom(true);
-    setTimeout(() => scrollToBottom("smooth"), 20);
+    setTimeout(scrollContainerToBottom, 40);
 
     // Optimistic UI update
     const tempMsg = {
@@ -414,18 +383,16 @@ function ChatContent() {
               </div>
 
               {/* Messages Scroll Area */}
-              <div className="flex-1 relative overflow-hidden flex flex-col">
-                <div
-                  ref={messagesContainerRef}
-                  onScroll={handleScroll}
-                  className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4"
-                >
-                  <div className="text-center pb-2">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800/80 text-[10px] text-neutral-500 dark:text-neutral-400 border border-neutral-200/60 dark:border-neutral-800">
-                      <Clock className="w-3 h-3 text-amber-500 flex-shrink-0" />
-                      <span>Encrypted web communication · Messages saved for 14 days</span>
-                    </span>
-                  </div>
+              <div
+                ref={messagesContainerRef}
+                className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4"
+              >
+                <div className="text-center pb-2">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800/80 text-[10px] text-neutral-500 dark:text-neutral-400 border border-neutral-200/60 dark:border-neutral-800">
+                    <Clock className="w-3 h-3 text-amber-500 flex-shrink-0" />
+                    <span>Encrypted web communication · Messages saved for 14 days</span>
+                  </span>
+                </div>
 
                   {messages.length > 0 ? (
                     messages.map((msg) => {
@@ -475,24 +442,7 @@ function ChatContent() {
                       </p>
                     </div>
                   )}
-                  <div ref={messagesEndRef} />
                 </div>
-
-                {/* Floating scroll to bottom button */}
-                {!isAtBottom && messages.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsAtBottom(true);
-                      scrollToBottom("smooth");
-                    }}
-                    className="absolute bottom-4 right-6 px-3 py-1.5 bg-black/90 dark:bg-white/90 text-white dark:text-black text-xs font-semibold rounded-full shadow-lg backdrop-blur-sm flex items-center gap-1.5 transition-all hover:scale-105 z-20 cursor-pointer"
-                  >
-                    <ArrowDown className="w-3.5 h-3.5" />
-                    <span>Scroll to latest</span>
-                  </button>
-                )}
-              </div>
 
               {/* Input Area */}
               <div className="p-3 sm:p-4 border-t border-neutral-200/80 dark:border-neutral-800/80 bg-white dark:bg-[#121215]">
