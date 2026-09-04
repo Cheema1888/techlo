@@ -4,7 +4,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID || "4af06d676c9f067d4e81091b82fe348f";
 const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID || "8d15aee04693ef07e902f725625be42f";
 const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY || "9863b823226725e87279e615b9af8ea812ddead57e82cc77f895dff5ca9e0160";
-const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || "techlo-product-images";
+const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || "techlo-images";
 const R2_PUBLIC_URL = (process.env.R2_PUBLIC_URL || "https://pub-72533f33b103419dbe1a3311b5cb6de6.r2.dev").replace(/\/$/, "");
 
 export const r2Client = new S3Client({
