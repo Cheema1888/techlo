@@ -146,11 +146,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       const json = await res.json();
-      if (!res.ok || !json.success || !json.data?.user) {
+      const userPayload = json.data?.user || json.user;
+      if (!res.ok || !json.success || !userPayload) {
         throw new Error(json.error || "Google sign-in failed");
       }
 
-      const loggedInUser: UserProfile = json.data.user;
+      const loggedInUser: UserProfile = userPayload;
       setUser(loggedInUser);
       localStorage.setItem("techlo_user_session", JSON.stringify(loggedInUser));
       closeAuthModal();

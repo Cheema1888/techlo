@@ -40,8 +40,11 @@ export async function POST(request: NextRequest) {
 
     const tokenInfo = (await verificationResponse.json()) as GoogleTokenInfo;
 
+    const cleanAud = tokenInfo.aud?.trim();
+    const cleanClientId = clientId.trim();
+
     if (
-      tokenInfo.aud !== clientId ||
+      cleanAud !== cleanClientId ||
       tokenInfo.email_verified !== "true" ||
       !tokenInfo.email ||
       !tokenInfo.sub
@@ -52,15 +55,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const cleanEmail = tokenInfo.email.toLowerCase().trim();
+
     const user = await prisma.user.upsert({
-      where: { email: tokenInfo.email },
+      where: { email: cleanEmail },
       update: {
         fullName: tokenInfo.name || undefined,
         avatarUrl: tokenInfo.picture || undefined,
       },
       create: {
-        fullName: tokenInfo.name || tokenInfo.email.split("@")[0],
-        email: tokenInfo.email,
+        fullName: tokenInfo.name || cleanEmail.split("@")[0],
+        email: cleanEmail,
         phoneNumber: `google:${tokenInfo.sub}`,
         university: "Google Account",
         gender: "unspecified",
@@ -70,27 +75,30 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    const safeUser = {
+      id: user.id,
+      fullName: user.fullName,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      university: user.university,
+      campus: user.campus,
+      gender: user.gender,
+      isPhoneVerified: user.isPhoneVerified,
+      isVerifiedStudent: user.isVerifiedStudent,
+      city: user.city,
+      avatarUrl: user.avatarUrl,
+      avatarColor: user.avatarColor,
+      rating: user.rating,
+      dealsCompleted: user.dealsCompleted,
+      role: user.role,
+    };
+
     return NextResponse.json({
       success: true,
       data: {
-        user: {
-          id: user.id,
-          fullName: user.fullName,
-          email: user.email,
-          phoneNumber: user.phoneNumber,
-          university: user.university,
-          campus: user.campus,
-          gender: user.gender,
-          isPhoneVerified: user.isPhoneVerified,
-          isVerifiedStudent: user.isVerifiedStudent,
-          city: user.city,
-          avatarUrl: user.avatarUrl,
-          avatarColor: user.avatarColor,
-          rating: user.rating,
-          dealsCompleted: user.dealsCompleted,
-          role: user.role,
-        },
+        user: safeUser,
       },
+      user: safeUser,
     });
   } catch (error) {
     console.error("Google sign-in error:", error);
