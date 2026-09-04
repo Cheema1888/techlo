@@ -5,9 +5,21 @@ import { dispatchEmailOtp } from "@/lib/emailGateway";
 
 export async function POST(req: NextRequest) {
   try {
-    const { fullName, email, phoneNumber, university, campus, eduEmail, city, password, avatarUrl, avatarColor } = await req.json();
+    const {
+      fullName,
+      email,
+      phoneNumber,
+      university,
+      gender,
+      campus,
+      eduEmail,
+      city,
+      password,
+      avatarUrl,
+      avatarColor,
+    } = await req.json();
 
-    // 1. Mandatory validation: Name, University, Phone Number, and Email
+    // 1. Mandatory validation: Name, University, Gender, Phone Number, and Email
     if (!fullName || !fullName.trim()) {
       return NextResponse.json(
         { success: false, error: "Full Name is required for registration" },
@@ -18,6 +30,13 @@ export async function POST(req: NextRequest) {
     if (!university || !university.trim()) {
       return NextResponse.json(
         { success: false, error: "Please select your Pakistani University" },
+        { status: 400 }
+      );
+    }
+
+    if (!gender || !gender.trim()) {
+      return NextResponse.json(
+        { success: false, error: "Gender selection is mandatory for registration" },
         { status: 400 }
       );
     }
@@ -37,14 +56,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Regular email validation (no university email requirement)
     if (!email || !email.trim() || !email.includes("@")) {
       return NextResponse.json(
-        { success: false, error: "A valid Email address is compulsory for registration" },
+        { success: false, error: "A valid regular Email address is compulsory for verification" },
         { status: 400 }
       );
     }
 
     const finalEmail = email.toLowerCase().trim();
+    const cleanGender = gender.toLowerCase().trim();
 
     // 2. Generate cryptographically secure 6-digit OTP code
     const generatedOtp = generateSecureOtp();
@@ -59,6 +80,7 @@ export async function POST(req: NextRequest) {
         passwordHash: password || "student123",
         university,
         campus: campus || `${university} Main Campus`,
+        gender: cleanGender,
         studentIdOrEduEmail: eduEmail || null,
         otpCode: generatedOtp,
         otpExpiresAt: otpExpires,
@@ -73,11 +95,12 @@ export async function POST(req: NextRequest) {
         phoneNumber: cleanPhone,
         university,
         campus: campus || `${university} Main Campus`,
+        gender: cleanGender,
         studentIdOrEduEmail: eduEmail || null,
         otpCode: generatedOtp,
         otpExpiresAt: otpExpires,
         isPhoneVerified: false,
-        isVerifiedStudent: finalEmail.endsWith(".edu.pk") || (eduEmail && eduEmail.includes(".edu.pk")) || false,
+        isVerifiedStudent: finalEmail.endsWith(".edu.pk") || false,
         city: city || "Islamabad",
         avatarUrl: avatarUrl || undefined,
         avatarColor: avatarColor || "cyan",
@@ -90,15 +113,15 @@ export async function POST(req: NextRequest) {
         data: {
           actionType: "USER_SIGNUP",
           title: "New Student Registered",
-          description: `${user.fullName} registered from ${user.university} (${cleanPhone} / ${finalEmail})`,
+          description: `${user.fullName} (${cleanGender}) registered from ${user.university} (${cleanPhone} / ${finalEmail})`,
           actorName: user.fullName,
           actorRole: "STUDENT",
-          metadataJson: JSON.stringify({ userId: user.id, university: user.university }),
+          metadataJson: JSON.stringify({ userId: user.id, university: user.university, gender: cleanGender }),
         },
       });
     } catch (e) {}
 
-    // 5. Dispatch OTP via Free Email Gateway
+    // 5. Dispatch OTP via Free Email Gateway (Resend)
     await dispatchEmailOtp(finalEmail, generatedOtp, user.fullName);
 
     // Also trigger SMS gateway if a real provider is set
@@ -114,7 +137,8 @@ export async function POST(req: NextRequest) {
         phoneNumber: cleanPhone,
         email: finalEmail,
         university: user.university,
-        otpCode: generatedOtp, // returned for developer convenience in dev mode
+        gender: cleanGender,
+        otpCode: generatedOtp,
       },
     });
   } catch (error: any) {

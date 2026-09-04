@@ -8,6 +8,7 @@ interface PendingSignupData {
   email: string;
   phoneNumber: string;
   university: string;
+  gender: string;
   campus?: string;
   eduEmail?: string;
   city?: string;

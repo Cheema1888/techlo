@@ -37,6 +37,7 @@ export interface UserProfile {
   university: string;
   campus?: string;
   studentIdOrEduEmail?: string;
+  gender?: string;
   isVerifiedStudent: boolean;
   city: string;
   avatarUrl?: string;

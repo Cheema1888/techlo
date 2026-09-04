@@ -55,6 +55,7 @@ export const AuthModal: React.FC = () => {
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [gender, setGender] = useState<"male" | "female" | "other">("male");
   const [selectedUniversity, setSelectedUniversity] = useState(PAKISTANI_UNIVERSITIES[0].name);
   const [campusCity, setCampusCity] = useState("");
   const [eduEmail, setEduEmail] = useState("");
@@ -117,6 +118,16 @@ export const AuthModal: React.FC = () => {
       return;
     }
 
+    if (!selectedUniversity) {
+      setSignupError("University selection is compulsory");
+      return;
+    }
+
+    if (!gender) {
+      setSignupError("Gender selection is compulsory");
+      return;
+    }
+
     const trimmedEmail = (signupEmail || eduEmail).trim().toLowerCase();
     if (!trimmedEmail || !trimmedEmail.includes("@")) {
       setSignupError("Valid Email is compulsory for verification");
@@ -133,6 +144,7 @@ export const AuthModal: React.FC = () => {
       email: trimmedEmail,
       phoneNumber: formattedPhone,
       university: selectedUniversity,
+      gender,
       campus: campusCity.trim() || `${selectedUniversity} Main Campus`,
       eduEmail: eduEmail.trim() || trimmedEmail,
       city: campusCity.split("/")[0].trim() || "Islamabad",
@@ -444,8 +456,8 @@ export const AuthModal: React.FC = () => {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-neutral-600 dark:text-neutral-400 uppercase text-[10px] font-semibold">
-                    Pakistani University *
+                  <label className="text-neutral-700 dark:text-neutral-300 uppercase text-[10px] font-bold">
+                    Pakistani University (Compulsory) *
                   </label>
                   <select
                     value={selectedUniversity}
@@ -458,6 +470,30 @@ export const AuthModal: React.FC = () => {
                       </option>
                     ))}
                   </select>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-neutral-700 dark:text-neutral-300 uppercase text-[10px] font-bold">
+                      Gender (Compulsory) *
+                    </label>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(["male", "female", "other"] as const).map((g) => (
+                      <button
+                        key={g}
+                        type="button"
+                        onClick={() => setGender(g)}
+                        className={`py-2 px-3 text-xs font-mono font-medium rounded-full border transition-all cursor-pointer capitalize ${
+                          gender === g
+                            ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-sm"
+                            : "bg-neutral-50 dark:bg-neutral-900/50 border-neutral-200/80 dark:border-neutral-800/80 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400"
+                        }`}
+                      >
+                        {g === "other" ? "Other" : g}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="space-y-1">
@@ -480,14 +516,14 @@ export const AuthModal: React.FC = () => {
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
                     <label className="text-neutral-700 dark:text-neutral-300 uppercase text-[10px] font-bold">
-                      Email Address (Compulsory) *
+                      Regular Email (Compulsory) *
                     </label>
-                    <span className="text-[9px] text-neutral-500 font-sans">Free Email OTP verification</span>
+                    <span className="text-[9px] text-neutral-500 font-sans">Verification OTP sent here</span>
                   </div>
                   <input
                     type="email"
                     required
-                    placeholder="student@university.edu.pk or yourname@gmail.com"
+                    placeholder="e.g. yourname@gmail.com (Gmail, Yahoo, Outlook, etc.)"
                     value={signupEmail}
                     onChange={(e) => {
                       setSignupEmail(e.target.value);

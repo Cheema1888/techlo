@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
       phoneNumber: updatedUser.phoneNumber,
       university: updatedUser.university,
       campus: updatedUser.campus || "",
+      gender: updatedUser.gender || "unspecified",
       isVerifiedStudent: updatedUser.isVerifiedStudent,
       role: updatedUser.role,
       avatarUrl: updatedUser.avatarUrl || undefined,

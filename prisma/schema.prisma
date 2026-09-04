@@ -22,6 +22,7 @@ model User {
   university          String
   campus              String?
   studentIdOrEduEmail String?
+  gender              String?          @default("unspecified") // male, female, other
   isVerifiedStudent   Boolean          @default(false)
   city                String           @default("Islamabad")
   avatarUrl           String?
