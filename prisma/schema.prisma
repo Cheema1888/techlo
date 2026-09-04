@@ -1,12 +1,12 @@
 // TECHLO Production Database Schema
-// Optimized for SQLite locally and seamless migration to PostgreSQL on Vercel/Supabase/Railway
+// Production PostgreSQL schema for durable Vercel deployments.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

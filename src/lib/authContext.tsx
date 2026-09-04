@@ -30,6 +30,7 @@ interface AuthContextType {
   closeAuthModal: () => void;
   setAuthModalView: (view: "login" | "signup" | "otp" | "verify_student") => void;
   loginWithEmailOrPhone: (identifier: string, password?: string, university?: string) => Promise<boolean>;
+  loginWithGoogleCredential: (credential: string) => Promise<boolean>;
   sendPhoneOtp: (phoneNumber: string, explicitSignupData?: PendingSignupData) => Promise<string>;
   verifyOtp: (code: string) => Promise<boolean>;
   verifyStudentBadge: (studentIdOrEduEmail: string) => Promise<boolean>;
@@ -133,6 +134,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (e: any) {
       console.error("Login error:", e);
       throw e;
+    }
+  };
+
+  const loginWithGoogleCredential = async (credential: string): Promise<boolean> => {
+    try {
+      const res = await fetch("/api/auth/google", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ credential }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.success || !json.data?.user) {
+        throw new Error(json.error || "Google sign-in failed");
+      }
+
+      const loggedInUser: UserProfile = json.data.user;
+      setUser(loggedInUser);
+      localStorage.setItem("techlo_user_session", JSON.stringify(loggedInUser));
+      closeAuthModal();
+      await refreshData();
+      return true;
+    } catch (e: any) {
+      console.error("Google login error:", e);
+      return false;
     }
   };
 
@@ -349,6 +375,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         closeAuthModal,
         setAuthModalView,
         loginWithEmailOrPhone,
+        loginWithGoogleCredential,
         sendPhoneOtp,
         verifyOtp,
         verifyStudentBadge,

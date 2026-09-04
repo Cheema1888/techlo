@@ -29,6 +29,7 @@ function ChatContent() {
   const [messages, setMessages] = useState<any[]>([]);
   const [inputText, setInputText] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [sendError, setSendError] = useState("");
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -129,6 +130,7 @@ function ChatContent() {
     if (!inputText.trim() || !activeConversation?.id || !user?.id || isSending) return;
 
     const textToSend = inputText.trim();
+    setSendError("");
     setInputText("");
     setIsSending(true);
 
@@ -160,12 +162,19 @@ function ChatContent() {
       });
 
       const json = await res.json();
-      if (json.success) {
-        await loadMessages(activeConversation.id);
-        await loadConversations();
+      if (!res.ok || !json.success || !json.data) {
+        throw new Error(json.error || "Message could not be saved");
       }
-    } catch (e) {
+
+      setMessages((prev) =>
+        prev.map((message) => (message.id === tempMsg.id ? json.data : message))
+      );
+      await loadConversations();
+    } catch (e: any) {
       console.error(e);
+      setMessages((prev) => prev.filter((message) => message.id !== tempMsg.id));
+      setInputText(textToSend);
+      setSendError(e?.message || "Message was not sent. Please try again.");
     } finally {
       setIsSending(false);
     }
@@ -406,12 +415,20 @@ function ChatContent() {
 
               {/* Input Area */}
               <div className="p-3 sm:p-4 border-t border-neutral-200/80 dark:border-neutral-800/80 bg-white dark:bg-[#121215]">
+                {sendError && (
+                  <p className="mb-2 px-2 text-[11px] text-rose-600 dark:text-rose-400" role="alert">
+                    {sendError}
+                  </p>
+                )}
                 <form onSubmit={handleSendMessage} className="flex items-center gap-2">
                   <input
                     type="text"
                     placeholder={`Message ${currentOtherUser.fullName}...`}
                     value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
+                    onChange={(e) => {
+                      setInputText(e.target.value);
+                      if (sendError) setSendError("");
+                    }}
                     className="flex-1 px-4 py-2.5 bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200/80 dark:border-neutral-800/80 rounded-full text-xs text-black dark:text-white placeholder-neutral-400 focus:outline-none focus:border-black dark:focus:border-white transition-all"
                   />
 

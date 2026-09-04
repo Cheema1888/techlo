@@ -12,7 +12,6 @@ import {
   MapPin,
   ShieldCheck,
   ArrowUpRight,
-  Lock,
 } from "lucide-react";
 
 interface ProductCardProps {
@@ -149,25 +148,25 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             <ArrowUpRight className="w-3 h-3 text-neutral-400" />
           </Link>
 
-          {hasVisiblePhone ? (
+          <Link
+            href={webChatUrl}
+            className="w-full py-1.5 px-2 rounded-xl bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black flex items-center justify-center gap-1 transition-colors font-medium"
+            title="Chat with the seller on TECHLO"
+          >
+            <MessageCircle className="w-3 h-3" />
+            <span>Live Chat</span>
+          </Link>
+
+          {hasVisiblePhone && (
             <a
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full py-1.5 px-2 rounded-xl bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black flex items-center justify-center gap-1 transition-colors font-medium"
+              className="col-span-2 w-full py-1.5 px-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-1 transition-colors font-medium"
             >
               <MessageCircle className="w-3 h-3" />
               <span>WhatsApp</span>
             </a>
-          ) : (
-            <Link
-              href={webChatUrl}
-              className="w-full py-1.5 px-2 rounded-xl bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black flex items-center justify-center gap-1 transition-colors font-medium"
-              title="Phone number hidden by seller • Chat on TECHLO"
-            >
-              <MessageCircle className="w-3 h-3" />
-              <span>Web Chat</span>
-            </Link>
           )}
         </div>
       </div>

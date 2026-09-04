@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/authContext";
 import { TechloLogo } from "../branding/TechloLogo";
 import { PhoneOtpModal } from "./PhoneOtpModal";
@@ -37,6 +37,7 @@ export const AuthModal: React.FC = () => {
     authModalView,
     setAuthModalView,
     loginWithEmailOrPhone,
+    loginWithGoogleCredential,
     setPendingSignupData,
     sendPhoneOtp,
     verifyStudentBadge,
@@ -46,6 +47,8 @@ export const AuthModal: React.FC = () => {
   const [loginPhone, setLoginPhone] = useState("");
   const [loginUniversity, setLoginUniversity] = useState(PAKISTANI_UNIVERSITIES[0].name);
   const [loginPassword, setLoginPassword] = useState("");
+  const [googleError, setGoogleError] = useState("");
+  const googleButtonRef = useRef<HTMLDivElement>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [isSubmittingLogin, setIsSubmittingLogin] = useState(false);
@@ -67,6 +70,81 @@ export const AuthModal: React.FC = () => {
   const [studentInput, setStudentInput] = useState("");
   const [isVerifyingStudent, setIsVerifyingStudent] = useState(false);
   const [studentVerifiedSuccess, setStudentVerifiedSuccess] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthModalOpen || !["login", "signup"].includes(authModalView)) {
+      return;
+    }
+
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      setGoogleError("Google sign-in is not configured yet.");
+      return;
+    }
+
+    const renderGoogleButton = () => {
+      const google = (window as Window & {
+        google?: {
+          accounts?: {
+            id?: {
+              initialize: (options: {
+                client_id: string;
+                callback: (response: { credential?: string }) => void;
+              }) => void;
+              renderButton: (
+                element: HTMLElement,
+                options: Record<string, string | number>
+              ) => void;
+            };
+          };
+        };
+      }).google;
+
+      if (!google?.accounts?.id || !googleButtonRef.current) return;
+
+      google.accounts.id.initialize({
+        client_id: clientId,
+        callback: async ({ credential }) => {
+          if (!credential) {
+            setGoogleError("Google did not return a sign-in credential.");
+            return;
+          }
+
+          setGoogleError("");
+          const success = await loginWithGoogleCredential(credential);
+          if (!success) {
+            setGoogleError("Google sign-in failed. Please try again.");
+          }
+        },
+      });
+
+      googleButtonRef.current.innerHTML = "";
+      google.accounts.id.renderButton(googleButtonRef.current, {
+        theme: "outline",
+        size: "large",
+        shape: "pill",
+        width: 320,
+        text: "continue_with",
+      });
+    };
+
+    const existingScript = document.getElementById("google-identity-services");
+    if (existingScript) {
+      renderGoogleButton();
+      existingScript.addEventListener("load", renderGoogleButton, { once: true });
+      return () => existingScript.removeEventListener("load", renderGoogleButton);
+    }
+
+    const script = document.createElement("script");
+    script.id = "google-identity-services";
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.addEventListener("load", renderGoogleButton, { once: true });
+    document.head.appendChild(script);
+
+    return () => script.removeEventListener("load", renderGoogleButton);
+  }, [isAuthModalOpen, authModalView, loginWithGoogleCredential]);
 
   if (!isAuthModalOpen) return null;
 
@@ -277,6 +355,24 @@ export const AuthModal: React.FC = () => {
                 >
                   Register
                 </button>
+              </div>
+            </div>
+
+            <div className="px-6 pt-5 space-y-4">
+              <div
+                ref={googleButtonRef}
+                className="flex min-h-10 justify-center"
+              />
+              {googleError && (
+                <p className="text-center text-xs text-rose-600 dark:text-rose-400">
+                  {googleError}
+                </p>
+              )}
+              <div className="relative flex items-center justify-center">
+                <div className="absolute inset-x-0 border-t border-neutral-200 dark:border-neutral-800" />
+                <span className="relative bg-white dark:bg-[#121215] px-3 text-[10px] uppercase tracking-wider text-neutral-400">
+                  or continue with phone
+                </span>
               </div>
             </div>
 
