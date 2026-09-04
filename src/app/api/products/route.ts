@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma, ensureDbSchema } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   try {
+    await ensureDbSchema();
     const { searchParams } = new URL(req.url);
     const category = searchParams.get("category");
     const condition = searchParams.get("condition");
@@ -118,6 +119,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    await ensureDbSchema();
     const body = await req.json();
     const {
       title,

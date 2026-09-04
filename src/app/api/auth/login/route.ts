@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma, ensureDbSchema } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {
+    await ensureDbSchema();
     const { identifier, password, university } = await req.json();
 
     if (!identifier) {
@@ -66,6 +67,7 @@ export async function POST(req: NextRequest) {
       phoneNumber: updatedUser.phoneNumber,
       university: updatedUser.university,
       campus: updatedUser.campus || `${updatedUser.university} Campus`,
+      gender: updatedUser.gender || "unspecified",
       isVerifiedStudent: updatedUser.isVerifiedStudent,
       rating: updatedUser.rating,
       dealsCompleted: updatedUser.dealsCompleted,

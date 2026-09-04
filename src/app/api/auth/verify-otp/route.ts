@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma, ensureDbSchema } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {
+    await ensureDbSchema();
     const { phoneNumber, email, otpCode, expectedOtp, fullName, university, gender } = await req.json();
 
     const cleanInputCode = (otpCode || "").toString().trim();

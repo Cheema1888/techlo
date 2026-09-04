@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma, ensureDbSchema } from "@/lib/prisma";
 import { generateSecureOtp, dispatchSmsOtp } from "@/lib/smsGateway";
 import { dispatchEmailOtp } from "@/lib/emailGateway";
 
 export async function POST(req: NextRequest) {
   try {
+    await ensureDbSchema();
     const {
       fullName,
       email,
