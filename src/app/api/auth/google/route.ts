@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, ensureDbSchema } from "@/lib/prisma";
+import { attachSessionCookie } from "@/lib/session";
 
 interface GoogleTokenInfo {
   aud?: string;
@@ -93,13 +94,22 @@ export async function POST(request: NextRequest) {
       role: user.role,
     };
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: {
         user: safeUser,
       },
       user: safeUser,
     });
+
+    attachSessionCookie(response, {
+      id: user.id,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      role: user.role,
+    });
+
+    return response;
   } catch (error) {
     console.error("Google sign-in error:", error);
     return NextResponse.json(

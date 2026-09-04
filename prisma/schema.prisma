@@ -69,11 +69,32 @@ model Product {
   seller            User           @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   savedBy           SavedItem[]
   conversations     Conversation[]
+  images            ProductImage[]
 
   @@index([category])
   @@index([condition])
   @@index([sellerId])
   @@index([city])
+}
+
+model ProductImage {
+  id         String   @id @default(uuid())
+  productId  String?
+  product    Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId     String
+  draftId    String
+  objectKey  String   @unique
+  url        String
+  position   Int
+  sizeBytes  Int
+  mimeType   String   @default("image/webp")
+  status     String   @default("pending") // pending, uploaded, attached, deleted
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([productId])
+  @@index([userId, draftId])
+  @@index([status, createdAt])
 }
 
 model Conversation {

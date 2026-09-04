@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, ensureDbSchema } from "@/lib/prisma";
+import { attachSessionCookie } from "@/lib/session";
 
 export async function POST(req: NextRequest) {
   try {
@@ -84,7 +85,7 @@ export async function POST(req: NextRequest) {
       avatarColor: user.avatarColor || "cyan",
     };
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: "Account verified successfully",
       data: {
@@ -92,6 +93,15 @@ export async function POST(req: NextRequest) {
       },
       user: safeUser,
     });
+
+    attachSessionCookie(response, {
+      id: user.id,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      role: user.role,
+    });
+
+    return response;
   } catch (error: any) {
     console.error("POST /api/auth/verify-otp error:", error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

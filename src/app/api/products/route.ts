@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, ensureDbSchema } from "@/lib/prisma";
+import { isApprovedImageUrl } from "@/lib/r2";
+import { getServerSession } from "@/lib/session";
 
 export async function GET(req: NextRequest) {
   try {
@@ -136,6 +138,7 @@ export async function POST(req: NextRequest) {
       location,
       city,
       sellerId,
+      draftId,
     } = body;
 
     if (!title || !category || !condition || !pricePkr || !description) {
@@ -145,8 +148,41 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Default to first user if sellerId not provided
-    let finalSellerId = sellerId;
+    const session = getServerSession(req);
+
+    // 1. Strictly enforce max 4 images per listing
+    const imageList: string[] = Array.isArray(images) ? images : [];
+    if (imageList.length > 4) {
+      return NextResponse.json(
+        { success: false, error: "Maximum of 4 photos allowed per advertisement" },
+        { status: 400 }
+      );
+    }
+
+    // 2. Strictly reject base64 data URLs & validate approved image domains
+    for (const imgUrl of imageList) {
+      if (typeof imgUrl === "string" && imgUrl.startsWith("data:")) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Base64 image data is not permitted. All photos must be uploaded to Cloudflare R2.",
+          },
+          { status: 400 }
+        );
+      }
+      if (!isApprovedImageUrl(imgUrl)) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Image URL not from an approved delivery domain: ${imgUrl}`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Default to session user or provided sellerId or first user
+    let finalSellerId = session?.userId || sellerId;
     if (!finalSellerId) {
       const defaultUser = await prisma.user.findFirst();
       if (!defaultUser) {
@@ -154,6 +190,11 @@ export async function POST(req: NextRequest) {
       }
       finalSellerId = defaultUser.id;
     }
+
+    const finalImages =
+      imageList.length > 0
+        ? imageList
+        : ["https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80"];
 
     const createdProduct = await prisma.product.create({
       data: {
@@ -164,7 +205,7 @@ export async function POST(req: NextRequest) {
         originalPricePkr: originalPricePkr ? parseFloat(originalPricePkr) : null,
         isNegotiable: Boolean(isNegotiable),
         showPhoneNumber: Boolean(showPhoneNumber),
-        imagesJson: JSON.stringify(images || ["https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80"]),
+        imagesJson: JSON.stringify(finalImages),
         description,
         specsJson: specs ? JSON.stringify(specs) : null,
         quantityAvailable: quantityAvailable ? parseInt(quantityAvailable) : 1,
@@ -176,6 +217,24 @@ export async function POST(req: NextRequest) {
         seller: true,
       },
     });
+
+    // Attach confirmed ProductImage records to this newly created product
+    if (draftId) {
+      try {
+        await prisma.productImage.updateMany({
+          where: {
+            draftId,
+            status: { in: ["pending", "uploaded"] },
+          },
+          data: {
+            status: "attached",
+            productId: createdProduct.id,
+          },
+        });
+      } catch (attachErr) {
+        console.error("Failed to attach draft images:", attachErr);
+      }
+    }
 
     // Log Activity
     try {

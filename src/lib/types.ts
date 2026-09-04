@@ -58,6 +58,7 @@ export interface ProductListing {
   isNegotiable: boolean;
   showPhoneNumber?: boolean; // privacy toggle
   images: string[];
+  draftId?: string;
   description: string;
   specs?: { [key: string]: string };
   seller: {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, ensureDbSchema } from "@/lib/prisma";
+import { attachSessionCookie } from "@/lib/session";
 
 export async function POST(req: NextRequest) {
   try {
@@ -75,11 +76,21 @@ export async function POST(req: NextRequest) {
       city: updatedUser.city,
     };
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: `Signed in as ${updatedUser.fullName} (${updatedUser.university})`,
       data: { user: safeUser, token: `jwt_${updatedUser.id}_${Date.now()}` },
+      user: safeUser,
     });
+
+    attachSessionCookie(response, {
+      id: updatedUser.id,
+      email: updatedUser.email,
+      phoneNumber: updatedUser.phoneNumber,
+      role: updatedUser.role,
+    });
+
+    return response;
   } catch (error: any) {
     console.error("POST /api/auth/login error:", error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
