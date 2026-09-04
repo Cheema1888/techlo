@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "@/lib/session";
+import { isSuperAdminEmail } from "@/lib/admin";
 
 export async function POST(req: NextRequest) {
   try {
+    const session = getServerSession(req);
+    if (!session || !isSuperAdminEmail(session.email)) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized. Administrator privileges required." },
+        { status: 403 }
+      );
+    }
+
     const { action, targetId, value, adminName = "Platform Admin" } = await req.json();
 
     if (!action || !targetId) {

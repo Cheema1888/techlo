@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "@/lib/session";
+import { isSuperAdminEmail } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   try {
+    const session = getServerSession(req);
+    if (!session || !isSuperAdminEmail(session.email)) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized. Administrator privileges required." },
+        { status: 403 }
+      );
+    }
+
     // 1. Fetch aggregate metrics
     const [totalUsers, verifiedStudents, totalProducts, activeQuotes, totalChats, activityLogs, recentUsers, recentProducts, recentQuotes] = await Promise.all([
       prisma.user.count(),

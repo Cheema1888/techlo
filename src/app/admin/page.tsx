@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { ChotuAvatar } from "@/components/common/ChotuAvatar";
 import { formatPKR } from "@/lib/utils";
+import { useAuth } from "@/lib/authContext";
+import { isSuperAdminEmail, ADMIN_EMAIL } from "@/lib/admin";
 import {
   Activity,
   Users,
@@ -19,29 +21,19 @@ import {
   Clock,
   Search,
   RefreshCw,
+  AlertCircle,
+  ArrowLeft,
 } from "lucide-react";
 
 export default function AdminDashboardPage() {
-  const [isAuthenticatedAdmin, setIsAuthenticatedAdmin] = useState(false);
-  const [passcode, setPasscode] = useState("");
-  const [passcodeError, setPasscodeError] = useState("");
+  const { user, isAuthenticated, openAuthModal } = useAuth();
+  const isAuthorizedAdmin = Boolean(isAuthenticated && isSuperAdminEmail(user?.email));
 
   const [activeTab, setActiveTab] = useState<"activity" | "listings" | "quotes" | "users">("activity");
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [filterSearch, setFilterSearch] = useState("");
-
-  const verifyPasscode = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (passcode.trim() === "techlo2026" || passcode.trim() === "admin") {
-      setIsAuthenticatedAdmin(true);
-      setPasscodeError("");
-      loadAdminData();
-    } else {
-      setPasscodeError("Invalid admin access key. (Default: techlo2026)");
-    }
-  };
 
   const loadAdminData = async () => {
     setLoading(true);
@@ -59,12 +51,12 @@ export default function AdminDashboardPage() {
   };
 
   useEffect(() => {
-    if (isAuthenticatedAdmin) {
+    if (isAuthorizedAdmin) {
       loadAdminData();
       const interval = setInterval(loadAdminData, 10000);
       return () => clearInterval(interval);
     }
-  }, [isAuthenticatedAdmin]);
+  }, [isAuthorizedAdmin]);
 
   const handleModerate = async (action: string, targetId: string, value?: any) => {
     setActionLoadingId(targetId);
@@ -72,7 +64,7 @@ export default function AdminDashboardPage() {
       const res = await fetch("/api/admin/moderate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, targetId, value }),
+        body: JSON.stringify({ action, targetId, value, adminName: user?.fullName || "Platform Admin" }),
       });
       const json = await res.json();
       if (json.success) {
@@ -85,43 +77,55 @@ export default function AdminDashboardPage() {
     }
   };
 
-  if (!isAuthenticatedAdmin) {
+  if (!isAuthorizedAdmin) {
     return (
       <div className="max-w-md mx-auto px-4 py-24 space-y-6">
         <div className="p-8 bg-white dark:bg-[#121215] border border-neutral-200/80 dark:border-neutral-800/80 rounded-3xl shadow-sm space-y-6 text-center">
-          <div className="w-12 h-12 rounded-full bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 flex items-center justify-center mx-auto text-black dark:text-white">
-            <Lock className="w-5 h-5" />
+          <div className="w-14 h-14 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 flex items-center justify-center mx-auto text-rose-600 dark:text-rose-400">
+            <ShieldAlert className="w-7 h-7" />
           </div>
 
-          <div className="space-y-1">
-            <h1 className="text-xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
-              TECHLO Admin Panel
+          <div className="space-y-2">
+            <h1 className="text-lg font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
+              Admin Access Restricted
             </h1>
-            <p className="text-xs text-neutral-500">
-              Enter master key to monitor recent platform activity, listings, and quotes.
+            <p className="text-xs text-neutral-500 leading-relaxed">
+              This control center is strictly restricted to the platform administrator (<strong>{ADMIN_EMAIL}</strong>). Access is not available to regular accounts.
             </p>
           </div>
 
-          <form onSubmit={verifyPasscode} className="space-y-3 text-xs">
-            {passcodeError && (
-              <p className="text-rose-500 text-[11px] font-medium">{passcodeError}</p>
-            )}
+          {isAuthenticated ? (
+            <div className="p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200/80 dark:border-neutral-800/80 space-y-2 text-xs">
+              <p className="text-neutral-500 text-[11px]">Currently signed in as:</p>
+              <p className="font-semibold text-neutral-900 dark:text-neutral-100 break-all">{user?.email}</p>
+              <p className="text-rose-500 text-[10px] font-medium">This account does not have administrator privileges.</p>
+              <button
+                onClick={() => openAuthModal("login")}
+                className="w-full mt-2 py-2 px-4 bg-neutral-200/80 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 font-semibold rounded-full cursor-pointer transition-all text-xs"
+              >
+                Sign In with Admin Account
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <button
+                onClick={() => openAuthModal("login")}
+                className="w-full py-2.5 bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black font-semibold rounded-full shadow-xs cursor-pointer transition-all text-xs"
+              >
+                Sign In as Administrator
+              </button>
+            </div>
+          )}
 
-            <input
-              type="password"
-              placeholder="Admin Access Key (techlo2026)"
-              value={passcode}
-              onChange={(e) => setPasscode(e.target.value)}
-              className="w-full px-4 py-2.5 bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200/80 dark:border-neutral-800/80 rounded-full text-black dark:text-white text-xs focus:outline-none focus:border-black dark:focus:border-white text-center"
-            />
-
-            <button
-              type="submit"
-              className="w-full py-2.5 bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black font-semibold rounded-full shadow-xs cursor-pointer transition-all"
+          <div className="pt-2">
+            <Link
+              href="/marketplace"
+              className="inline-flex items-center gap-1.5 text-xs text-neutral-500 hover:text-black dark:hover:text-white transition-colors"
             >
-              Unlock Dashboard
-            </button>
-          </form>
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back to Marketplace</span>
+            </Link>
+          </div>
         </div>
       </div>
     );

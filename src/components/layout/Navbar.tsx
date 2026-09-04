@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { TechloLogo } from "../branding/TechloLogo";
 import { useAuth } from "@/lib/authContext";
 import { useTheme } from "@/lib/themeContext";
+import { isSuperAdminEmail } from "@/lib/admin";
 import { ChotuAvatar } from "../common/ChotuAvatar";
 import {
   Search,
@@ -30,6 +31,8 @@ export const Navbar: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+
+  const isAdmin = Boolean(user && isSuperAdminEmail(user.email));
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -181,13 +184,15 @@ export const Navbar: React.FC = () => {
                       <span>Request Prototyping</span>
                     </Link>
 
-                    <Link
-                      href="/admin"
-                      className="flex items-center gap-2 px-4 py-2 text-xs text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
-                    >
-                      <Shield className="w-3.5 h-3.5 text-neutral-400" />
-                      <span>Admin Control Panel</span>
-                    </Link>
+                    {isAdmin && (
+                      <Link
+                        href="/admin"
+                        className="flex items-center gap-2 px-4 py-2 text-xs text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
+                      >
+                        <Shield className="w-3.5 h-3.5 text-neutral-400" />
+                        <span>Admin Control Panel</span>
+                      </Link>
+                    )}
 
                     <div className="border-t border-neutral-100 dark:border-neutral-800 my-1"></div>
 
@@ -235,14 +240,16 @@ export const Navbar: React.FC = () => {
                   {link.name}
                 </Link>
               ))}
-              <Link
-                href="/admin"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="px-3 py-2 text-xs font-medium text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl flex items-center gap-1.5"
-              >
-                <Shield className="w-3.5 h-3.5 text-neutral-400" />
-                <span>Admin Panel</span>
-              </Link>
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="px-3 py-2 text-xs font-medium text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl flex items-center gap-1.5"
+                >
+                  <Shield className="w-3.5 h-3.5 text-neutral-400" />
+                  <span>Admin Panel</span>
+                </Link>
+              )}
             </nav>
           </div>
         )}

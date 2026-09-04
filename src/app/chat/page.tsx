@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   User,
   Clock,
+  ChevronDown,
 } from "lucide-react";
 
 function ChatContent() {
@@ -35,10 +36,43 @@ function ChatContent() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const isAtBottomRef = useRef(true);
+  const prevMessagesLengthRef = useRef(0);
+  const [showScrollBottomButton, setShowScrollBottomButton] = useState(false);
+  const [hasNewIncoming, setHasNewIncoming] = useState(false);
 
-  const scrollContainerToBottom = () => {
-    if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+  const isNearBottom = (el: HTMLDivElement, threshold = 120) => {
+    return el.scrollHeight - el.scrollTop - el.clientHeight <= threshold;
+  };
+
+  const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    // Only scroll if there is scrollable content ("reaches a certain level where we need to scroll")
+    if (el.scrollHeight > el.clientHeight) {
+      if (behavior === "smooth") {
+        el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+      } else {
+        el.scrollTop = el.scrollHeight;
+      }
+    }
+    isAtBottomRef.current = true;
+    setShowScrollBottomButton(false);
+    setHasNewIncoming(false);
+  };
+
+  const handleScroll = () => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    const near = isNearBottom(el, 100);
+    isAtBottomRef.current = near;
+
+    const hasOverflow = el.scrollHeight > el.clientHeight + 20;
+    if (hasOverflow && !near) {
+      setShowScrollBottomButton(true);
+    } else {
+      setShowScrollBottomButton(false);
+      setHasNewIncoming(false);
     }
   };
 
@@ -100,33 +134,82 @@ function ChatContent() {
   }, [user?.id, isAuthenticated, targetSellerId, targetProductId]);
 
   // 2. Fetch messages when active conversation changes
-  const loadMessages = async (convoId: string, shouldScroll = false) => {
+  const loadMessages = async (convoId: string) => {
     if (!convoId) return;
     try {
       const res = await fetch(`/api/chat/messages?conversationId=${convoId}`);
       const json = await res.json();
       if (json.success && json.data) {
         setMessages(json.data);
-        if (shouldScroll) {
-          setTimeout(scrollContainerToBottom, 60);
-          setTimeout(scrollContainerToBottom, 200);
-        }
       }
     } catch (e) {
       console.error(e);
     }
   };
 
+  // Reset scroll & message tracking when active conversation changes
   useEffect(() => {
     if (activeConversation?.id) {
       setMessages([]);
-      loadMessages(activeConversation.id, true);
+      prevMessagesLengthRef.current = 0;
+      isAtBottomRef.current = true;
+      setShowScrollBottomButton(false);
+      setHasNewIncoming(false);
+
+      loadMessages(activeConversation.id);
       const interval = setInterval(() => {
-        loadMessages(activeConversation.id, false);
-      }, 5000); // Polling for messages without scroll jumping
+        loadMessages(activeConversation.id);
+      }, 4000); // 4-second polling for active real-time updates
       return () => clearInterval(interval);
     }
   }, [activeConversation?.id]);
+
+  // Smart Auto-Scroll Effect: triggers whenever messages update
+  useEffect(() => {
+    const currentCount = messages.length;
+    const prevCount = prevMessagesLengthRef.current;
+    const isNewMessageAdded = currentCount > prevCount;
+    prevMessagesLengthRef.current = currentCount;
+
+    if (currentCount === 0) return;
+
+    // A. Initial load for this conversation: scroll to bottom so latest messages are visible
+    if (prevCount === 0) {
+      requestAnimationFrame(() => {
+        scrollToBottom("auto");
+        setTimeout(() => scrollToBottom("auto"), 50);
+        setTimeout(() => scrollToBottom("auto"), 180);
+      });
+      return;
+    }
+
+    // B. New message was added
+    if (isNewMessageAdded) {
+      const lastMsg = messages[messages.length - 1];
+      const isMe = lastMsg?.senderId === user?.id;
+
+      if (isMe) {
+        // I sent a message: scroll to bottom immediately so I can see it
+        requestAnimationFrame(() => {
+          scrollToBottom("smooth");
+          setTimeout(() => scrollToBottom("smooth"), 60);
+        });
+      } else {
+        // Incoming message from chat partner:
+        if (isAtBottomRef.current) {
+          // User was already at/near bottom following the chat: advance to latest message!
+          requestAnimationFrame(() => {
+            scrollToBottom("smooth");
+            setTimeout(() => scrollToBottom("smooth"), 60);
+          });
+        } else {
+          // User was scrolled up reading history: show "New message" indicator
+          setHasNewIncoming(true);
+          setShowScrollBottomButton(true);
+        }
+      }
+    }
+  }, [messages, user?.id]);
 
   // 3. Send message handler
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -137,7 +220,6 @@ function ChatContent() {
     setSendError("");
     setInputText("");
     setIsSending(true);
-    setTimeout(scrollContainerToBottom, 40);
 
     // Optimistic UI update
     const tempMsg = {
@@ -154,6 +236,11 @@ function ChatContent() {
       },
     };
     setMessages((prev) => [...prev, tempMsg]);
+
+    // Scroll to bottom immediately for optimistic message
+    requestAnimationFrame(() => {
+      scrollToBottom("smooth");
+    });
 
     try {
       const res = await fetch("/api/chat/messages", {
@@ -322,7 +409,7 @@ function ChatContent() {
         </div>
 
         {/* Right Column: Active Chat Room (8 cols) */}
-        <div className={`md:col-span-8 flex flex-col h-full min-h-0 overflow-hidden bg-white dark:bg-[#121215] ${!activeConversation ? "hidden md:flex items-center justify-center" : "flex"}`}>
+        <div className={`md:col-span-8 relative flex flex-col h-full min-h-0 overflow-hidden bg-white dark:bg-[#121215] ${!activeConversation ? "hidden md:flex items-center justify-center" : "flex"}`}>
           {activeConversation && currentOtherUser ? (
             <>
               {/* Header */}
@@ -389,6 +476,7 @@ function ChatContent() {
               {/* Messages Scroll Area */}
               <div
                 ref={messagesContainerRef}
+                onScroll={handleScroll}
                 className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-4"
               >
                 <div className="text-center pb-2">
@@ -447,6 +535,23 @@ function ChatContent() {
                     </div>
                   )}
                 </div>
+
+              {/* Floating Scroll to Latest Button */}
+              {showScrollBottomButton && (
+                <div className="absolute bottom-20 right-6 z-20">
+                  <button
+                    type="button"
+                    onClick={() => scrollToBottom("smooth")}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black dark:bg-white text-white dark:text-black shadow-lg hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-all cursor-pointer text-xs font-semibold"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" />
+                    <span>{hasNewIncoming ? "New message" : "Latest"}</span>
+                    {hasNewIncoming && (
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    )}
+                  </button>
+                </div>
+              )}
 
               {/* Input Area */}
               <div className="flex-shrink-0 p-3 sm:p-4 border-t border-neutral-200/80 dark:border-neutral-800/80 bg-white dark:bg-[#121215]">
