@@ -272,7 +272,7 @@ export default function SellHardwarePage() {
           }
         };
 
-        xhr.onerror = () => reject(new Error("Network error during Cloudflare R2 upload"));
+        xhr.onerror = () => reject(new Error("Direct Cloudflare R2 upload failed. Please verify CORS is enabled on the techlo-images bucket in Cloudflare."));
         xhr.send(slot.blob);
       } catch (err: any) {
         setImageSlots((prev) =>
