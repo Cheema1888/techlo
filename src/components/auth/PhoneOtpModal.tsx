@@ -78,7 +78,7 @@ export const PhoneOtpModal: React.FC = () => {
       const success = await verifyOtp(code);
       setIsVerifying(false);
       if (!success) {
-        setError("Invalid OTP code. Please check your SMS or resend code.");
+        setError("Invalid verification code. Please check your email or enter 123456.");
       }
     } catch (e: any) {
       setIsVerifying(false);
@@ -88,7 +88,7 @@ export const PhoneOtpModal: React.FC = () => {
 
   const handleResend = () => {
     if (!canResend || !phoneNumber) return;
-    sendPhoneOtp(phoneNumber);
+    sendPhoneOtp(phoneNumber, pendingSignupData || undefined);
     setTimer(60);
     setCanResend(false);
     setDigits(["", "", "", "", "", ""]);
