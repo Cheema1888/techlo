@@ -15,6 +15,8 @@ import {
   ExternalLink,
   ShieldCheck,
   User,
+  Clock,
+  ArrowDown,
 } from "lucide-react";
 
 function ChatContent() {
@@ -32,11 +34,24 @@ function ChatContent() {
   const [sendError, setSendError] = useState("");
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isAtBottom, setIsAtBottom] = useState(true);
 
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
+    if (messagesContainerRef.current) {
+      const el = messagesContainerRef.current;
+      if (behavior === "auto") {
+        el.scrollTop = el.scrollHeight;
+      } else {
+        el.scrollTo({
+          top: el.scrollHeight,
+          behavior: "smooth",
+        });
+      }
+    }
+    messagesEndRef.current?.scrollIntoView({ behavior });
   };
 
   // 1. Fetch or initialize conversations
@@ -97,13 +112,17 @@ function ChatContent() {
   }, [user?.id, isAuthenticated, targetSellerId, targetProductId]);
 
   // 2. Fetch messages when active conversation changes
-  const loadMessages = async (convoId: string) => {
+  const loadMessages = async (convoId: string, isInitial = false) => {
     if (!convoId) return;
     try {
       const res = await fetch(`/api/chat/messages?conversationId=${convoId}`);
       const json = await res.json();
       if (json.success && json.data) {
         setMessages(json.data);
+        if (isInitial || isAtBottom) {
+          setTimeout(() => scrollToBottom(isInitial ? "auto" : "smooth"), 30);
+          setTimeout(() => scrollToBottom("auto"), 200);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -112,17 +131,28 @@ function ChatContent() {
 
   useEffect(() => {
     if (activeConversation?.id) {
-      loadMessages(activeConversation.id);
+      setMessages([]);
+      setIsAtBottom(true);
+      loadMessages(activeConversation.id, true);
       const interval = setInterval(() => {
-        loadMessages(activeConversation.id);
+        loadMessages(activeConversation.id, false);
       }, 4000); // Polling for messages
       return () => clearInterval(interval);
     }
   }, [activeConversation?.id]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (isAtBottom) {
+      scrollToBottom("smooth");
+    }
+  }, [messages.length, isAtBottom]);
+
+  const handleScroll = () => {
+    if (!messagesContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+    const distanceToBottom = scrollHeight - scrollTop - clientHeight;
+    setIsAtBottom(distanceToBottom < 80);
+  };
 
   // 3. Send message handler
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -133,6 +163,8 @@ function ChatContent() {
     setSendError("");
     setInputText("");
     setIsSending(true);
+    setIsAtBottom(true);
+    setTimeout(() => scrollToBottom("smooth"), 20);
 
     // Optimistic UI update
     const tempMsg = {
@@ -233,6 +265,11 @@ function ChatContent() {
               <span className="text-[11px] px-2 py-0.5 rounded-full bg-neutral-200/80 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-semibold">
                 {conversations.length}
               </span>
+            </div>
+
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[10px] text-amber-800 dark:text-amber-300">
+              <Clock className="w-3 h-3 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+              <span>Messages automatically kept for <strong>14 days</strong></span>
             </div>
 
             {/* Search */}
@@ -363,54 +400,98 @@ function ChatContent() {
                 )}
               </div>
 
+              {/* 14-Day History Retention Banner */}
+              <div className="bg-amber-500/10 dark:bg-amber-500/15 border-b border-amber-500/20 px-4 py-2 flex items-center justify-between gap-3 text-[11px] text-amber-900 dark:text-amber-200">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                  <span>
+                    <strong>14-Day History Notice:</strong> Direct messages are automatically retained for <strong>14 days</strong> and then permanently deleted for student privacy.
+                  </span>
+                </div>
+                <span className="hidden sm:inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/20 text-amber-800 dark:text-amber-300 flex-shrink-0">
+                  14-Day Auto-Purge
+                </span>
+              </div>
+
               {/* Messages Scroll Area */}
-              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
-                {messages.length > 0 ? (
-                  messages.map((msg) => {
-                    const isMe = msg.senderId === user.id;
+              <div className="flex-1 relative overflow-hidden flex flex-col">
+                <div
+                  ref={messagesContainerRef}
+                  onScroll={handleScroll}
+                  className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4"
+                >
+                  <div className="text-center pb-2">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800/80 text-[10px] text-neutral-500 dark:text-neutral-400 border border-neutral-200/60 dark:border-neutral-800">
+                      <Clock className="w-3 h-3 text-amber-500 flex-shrink-0" />
+                      <span>Encrypted web communication · Messages saved for 14 days</span>
+                    </span>
+                  </div>
 
-                    return (
-                      <div
-                        key={msg.id}
-                        className={`flex items-end gap-2 ${isMe ? "justify-end" : "justify-start"}`}
-                      >
-                        {!isMe && (
-                          <ChotuAvatar
-                            name={currentOtherUser.fullName}
-                            avatarUrl={currentOtherUser.avatarUrl}
-                            color={currentOtherUser.avatarColor || "cyan"}
-                            size="xs"
-                          />
-                        )}
+                  {messages.length > 0 ? (
+                    messages.map((msg) => {
+                      const isMe = msg.senderId === user.id;
 
+                      return (
                         <div
-                          className={`max-w-[80%] sm:max-w-[70%] rounded-2xl p-3 text-xs leading-relaxed ${
-                            isMe
-                              ? "bg-black text-white dark:bg-white dark:text-black rounded-br-xs"
-                              : "bg-neutral-100 dark:bg-neutral-800/80 text-neutral-900 dark:text-neutral-100 rounded-bl-xs"
-                          }`}
+                          key={msg.id}
+                          className={`flex items-end gap-2 ${isMe ? "justify-end" : "justify-start"}`}
                         >
-                          <p className="whitespace-pre-wrap break-words">{msg.content}</p>
-                          <span
-                            className={`text-[9px] block text-right mt-1 ${
-                              isMe ? "text-neutral-400 dark:text-neutral-500" : "text-neutral-400"
+                          {!isMe && (
+                            <ChotuAvatar
+                              name={currentOtherUser.fullName}
+                              avatarUrl={currentOtherUser.avatarUrl}
+                              color={currentOtherUser.avatarColor || "cyan"}
+                              size="xs"
+                            />
+                          )}
+
+                          <div
+                            className={`max-w-[80%] sm:max-w-[70%] rounded-2xl p-3 text-xs leading-relaxed ${
+                              isMe
+                                ? "bg-black text-white dark:bg-white dark:text-black rounded-br-xs"
+                                : "bg-neutral-100 dark:bg-neutral-800/80 text-neutral-900 dark:text-neutral-100 rounded-bl-xs"
                             }`}
                           >
-                            {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                          </span>
+                            <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                            <span
+                              className={`text-[9px] block text-right mt-1 ${
+                                isMe ? "text-neutral-400 dark:text-neutral-500" : "text-neutral-400"
+                              }`}
+                            >
+                              {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="text-center py-12 text-neutral-400 text-xs space-y-2">
-                    <p>No messages in this conversation yet.</p>
-                    <p className="text-[11px] text-neutral-500">
-                      Say hello to {currentOtherUser.fullName} and arrange campus pickup or negotiate pricing!
-                    </p>
-                  </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-12 text-neutral-400 text-xs space-y-2">
+                      <p>No messages in this conversation yet.</p>
+                      <p className="text-[11px] text-neutral-500">
+                        Say hello to {currentOtherUser.fullName} and arrange campus pickup or negotiate pricing!
+                      </p>
+                      <p className="text-[10px] text-amber-600/80 dark:text-amber-400/80">
+                        (Note: Messages are kept for 14 days)
+                      </p>
+                    </div>
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+
+                {/* Floating scroll to bottom button */}
+                {!isAtBottom && messages.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAtBottom(true);
+                      scrollToBottom("smooth");
+                    }}
+                    className="absolute bottom-4 right-6 px-3 py-1.5 bg-black/90 dark:bg-white/90 text-white dark:text-black text-xs font-semibold rounded-full shadow-lg backdrop-blur-sm flex items-center gap-1.5 transition-all hover:scale-105 z-20 cursor-pointer"
+                  >
+                    <ArrowDown className="w-3.5 h-3.5" />
+                    <span>Scroll to latest</span>
+                  </button>
                 )}
-                <div ref={messagesEndRef} />
               </div>
 
               {/* Input Area */}
@@ -440,6 +521,17 @@ function ChatContent() {
                     <Send className="w-4 h-4" />
                   </button>
                 </form>
+
+                <div className="mt-2 flex items-center justify-between px-1 text-[10px] text-neutral-400 dark:text-neutral-500">
+                  <span className="flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3 text-emerald-500" />
+                    <span>Verified Student Hardware Exchange</span>
+                  </span>
+                  <span className="flex items-center gap-1 text-amber-600/90 dark:text-amber-400/90 font-medium">
+                    <Clock className="w-3 h-3 text-amber-500" />
+                    <span>Messages kept for 14 days</span>
+                  </span>
+                </div>
               </div>
             </>
           ) : (

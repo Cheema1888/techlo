@@ -31,10 +31,19 @@ export async function GET(req: NextRequest) {
       deletedCount++;
     }
 
+    // Purge chat messages older than 14 days
+    const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+    const deletedChats = await prisma.chatMessage.deleteMany({
+      where: {
+        createdAt: { lt: fourteenDaysAgo },
+      },
+    });
+
     return NextResponse.json({
       success: true,
-      message: `Cleaned up ${deletedCount} orphaned upload records`,
-      deletedCount,
+      message: `Cleaned up ${deletedCount} orphaned upload records and ${deletedChats.count} expired chat messages`,
+      deletedUploadsCount: deletedCount,
+      deletedChatMessagesCount: deletedChats.count,
     });
   } catch (error: any) {
     console.error("GET /api/cron/cleanup-uploads error:", error);

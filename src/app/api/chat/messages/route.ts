@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// GET: Fetch messages for a conversation
+export const dynamic = "force-dynamic";
+
+// GET: Fetch messages for a conversation (last 14 days)
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -11,8 +13,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: "conversationId required" }, { status: 400 });
     }
 
+    const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+
     const messages = await prisma.chatMessage.findMany({
-      where: { conversationId },
+      where: {
+        conversationId,
+        createdAt: { gte: fourteenDaysAgo },
+      },
       include: {
         sender: {
           select: { id: true, fullName: true, avatarUrl: true, avatarColor: true },
