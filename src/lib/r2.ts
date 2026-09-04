@@ -110,3 +110,22 @@ export function isApprovedImageUrl(url: string): boolean {
   ];
   return approvedPrefixes.some((prefix) => url.startsWith(prefix));
 }
+
+/**
+ * Uploads a WebP buffer directly to Cloudflare R2 from server
+ */
+export async function uploadR2Buffer(params: {
+  objectKey: string;
+  contentType: string;
+  buffer: Buffer | Uint8Array;
+}): Promise<string> {
+  const command = new PutObjectCommand({
+    Bucket: R2_BUCKET_NAME,
+    Key: params.objectKey,
+    ContentType: params.contentType,
+    Body: params.buffer,
+    CacheControl: "public, max-age=31536000, immutable",
+  });
+  await r2Client.send(command);
+  return `${R2_PUBLIC_URL}/${params.objectKey}`;
+}

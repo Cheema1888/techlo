@@ -188,7 +188,44 @@ export default function SellHardwarePage() {
     setSpecs(specs.filter((_, i) => i !== index));
   };
 
-  // Direct Browser-to-Cloudflare-R2 Upload with progress
+  // Fallback upload via server gateway (in case browser CORS is pending or network filters direct PUT)
+  const uploadSlotViaServerFallback = async (
+    slot: ListingImageSlot,
+    draftId: string,
+    position: number
+  ): Promise<{ publicUrl: string; objectKey: string }> => {
+    if (!slot.blob) throw new Error("Image binary not found");
+    const form = new FormData();
+    form.append("file", slot.blob, `image_${position}.webp`);
+    form.append("draftId", draftId);
+    form.append("position", String(position));
+    if (user?.id) form.append("userId", user.id);
+
+    setImageSlots((prev) =>
+      prev.map((s) => (s.id === slot.id ? { ...s, uploadProgress: 50, status: "uploading" } : s))
+    );
+
+    const res = await fetch("/api/uploads/server", {
+      method: "POST",
+      body: form,
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || "Failed to upload photo to storage");
+    }
+
+    const { publicUrl, objectKey } = data.data;
+    setImageSlots((prev) =>
+      prev.map((s) =>
+        s.id === slot.id
+          ? { ...s, status: "uploaded", uploadProgress: 100, publicUrl, objectKey }
+          : s
+      )
+    );
+    return { publicUrl, objectKey };
+  };
+
+  // Direct Browser-to-Cloudflare-R2 Upload with automatic gateway fallback
   const uploadSlotToR2 = (
     slot: ListingImageSlot,
     draftId: string,
@@ -219,7 +256,9 @@ export default function SellHardwarePage() {
 
         const signData = await signRes.json();
         if (!signRes.ok || !signData.success || !signData.data?.uploadUrl) {
-          throw new Error(signData.error || "Failed to generate upload signature");
+          // Fall back to server upload
+          const fallbackRes = await uploadSlotViaServerFallback(slot, draftId, position);
+          return resolve(fallbackRes);
         }
 
         const { uploadUrl, publicUrl, objectKey } = signData.data;
@@ -265,20 +304,48 @@ export default function SellHardwarePage() {
 
               resolve({ publicUrl, objectKey });
             } catch (confirmErr: any) {
-              reject(confirmErr);
+              try {
+                const fb = await uploadSlotViaServerFallback(slot, draftId, position);
+                resolve(fb);
+              } catch (fbErr: any) {
+                reject(confirmErr);
+              }
             }
           } else {
-            reject(new Error(`Cloudflare R2 returned HTTP ${xhr.status}`));
+            // Status not 2xx (e.g. CORS preflight issue), trigger server fallback
+            try {
+              const fb = await uploadSlotViaServerFallback(slot, draftId, position);
+              resolve(fb);
+            } catch (fbErr: any) {
+              reject(new Error(`Cloudflare R2 returned HTTP ${xhr.status}`));
+            }
           }
         };
 
-        xhr.onerror = () => reject(new Error("Direct Cloudflare R2 upload failed. Please verify CORS is enabled on the techlo-images bucket in Cloudflare."));
+        xhr.onerror = async () => {
+          // Direct browser upload network error (most commonly CORS preflight), seamlessly fall back
+          try {
+            const fb = await uploadSlotViaServerFallback(slot, draftId, position);
+            resolve(fb);
+          } catch (fbErr: any) {
+            setImageSlots((prev) =>
+              prev.map((s) => (s.id === slot.id ? { ...s, status: "failed", error: fbErr.message } : s))
+            );
+            reject(fbErr);
+          }
+        };
+
         xhr.send(slot.blob);
       } catch (err: any) {
-        setImageSlots((prev) =>
-          prev.map((s) => (s.id === slot.id ? { ...s, status: "failed", error: err.message } : s))
-        );
-        reject(err);
+        try {
+          const fb = await uploadSlotViaServerFallback(slot, draftId, position);
+          resolve(fb);
+        } catch (fbErr: any) {
+          setImageSlots((prev) =>
+            prev.map((s) => (s.id === slot.id ? { ...s, status: "failed", error: fbErr.message } : s))
+          );
+          reject(fbErr);
+        }
       }
     });
   };
