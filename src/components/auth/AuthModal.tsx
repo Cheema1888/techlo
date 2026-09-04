@@ -57,9 +57,9 @@ export const AuthModal: React.FC = () => {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [gender, setGender] = useState<"male" | "female" | "other">("male");
   const [selectedUniversity, setSelectedUniversity] = useState(PAKISTANI_UNIVERSITIES[0].name);
+  const [customUniversity, setCustomUniversity] = useState("");
   const [campusCity, setCampusCity] = useState("");
   const [eduEmail, setEduEmail] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
   const [avatarColor, setAvatarColor] = useState<ChotuColor>("cyan");
   const [signupError, setSignupError] = useState("");
 
@@ -118,8 +118,11 @@ export const AuthModal: React.FC = () => {
       return;
     }
 
-    if (!selectedUniversity) {
-      setSignupError("University selection is compulsory");
+    const isOtherUni = selectedUniversity === "Other" || selectedUniversity === "Other (Custom / Unlisted)";
+    const finalUniversity = isOtherUni ? customUniversity.trim() : selectedUniversity;
+
+    if (!finalUniversity) {
+      setSignupError(isOtherUni ? "Please type your university name" : "University selection is compulsory");
       return;
     }
 
@@ -143,12 +146,11 @@ export const AuthModal: React.FC = () => {
       fullName: fullName.trim(),
       email: trimmedEmail,
       phoneNumber: formattedPhone,
-      university: selectedUniversity,
+      university: finalUniversity,
       gender,
-      campus: campusCity.trim() || `${selectedUniversity} Main Campus`,
+      campus: campusCity.trim() || `${finalUniversity} Campus`,
       eduEmail: eduEmail.trim() || trimmedEmail,
       city: campusCity.split("/")[0].trim() || "Islamabad",
-      avatarUrl: avatarUrl.trim() || undefined,
       avatarColor: avatarColor || "cyan",
     });
 
@@ -383,21 +385,20 @@ export const AuthModal: React.FC = () => {
                   </div>
                 )}
 
-                {/* Chotu Bot Avatar & Photo Selector */}
+                {/* Chotu Bot Avatar Selector */}
                 <div className="p-3 bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200/80 dark:border-neutral-800/80 rounded-2xl space-y-2.5">
                   <div className="flex items-center gap-3">
                     <ChotuAvatar
                       name={fullName || "Student"}
-                      avatarUrl={avatarUrl}
                       color={avatarColor}
                       size="lg"
                     />
-                    <div className="space-y-1">
+                    <div className="space-y-0.5">
                       <span className="font-semibold text-black dark:text-white block text-xs">
                         Student Avatar
                       </span>
                       <span className="text-[11px] text-neutral-500 block">
-                        Pick your <strong>Chotu Bot Color</strong> or paste a custom photo URL below.
+                        Choose your <strong>Chotu Bot Color</strong> for campus deals.
                       </span>
                     </div>
                   </div>
@@ -405,19 +406,16 @@ export const AuthModal: React.FC = () => {
                   {/* Chotu Bot Color Palette Chips */}
                   <div className="space-y-1 pt-1 border-t border-neutral-200/60 dark:border-neutral-800/60">
                     <span className="text-[10px] text-neutral-400 uppercase font-semibold block">
-                      Choose Chotu Bot Color:
+                      Choose Bot Color:
                     </span>
                     <div className="flex items-center gap-1.5 flex-wrap">
                       {CHOTU_COLORS.map((c) => (
                         <button
                           key={c.id}
                           type="button"
-                          onClick={() => {
-                            setAvatarColor(c.id);
-                            setAvatarUrl("");
-                          }}
+                          onClick={() => setAvatarColor(c.id)}
                           className={`px-2.5 py-1 rounded-full text-[10px] font-semibold transition-all cursor-pointer flex items-center gap-1 ${
-                            avatarColor === c.id && !avatarUrl
+                            avatarColor === c.id
                               ? "bg-black text-white dark:bg-white dark:text-black shadow-xs ring-1 ring-black dark:ring-white"
                               : "bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white"
                           }`}
@@ -427,17 +425,6 @@ export const AuthModal: React.FC = () => {
                         </button>
                       ))}
                     </div>
-                  </div>
-
-                  {/* Custom Photo URL Input */}
-                  <div className="space-y-1 pt-1">
-                    <input
-                      type="url"
-                      placeholder="Or paste your photo URL (https://...)"
-                      value={avatarUrl}
-                      onChange={(e) => setAvatarUrl(e.target.value)}
-                      className="w-full px-3 py-1.5 bg-white dark:bg-[#18181b] border border-neutral-200/80 dark:border-neutral-800/80 rounded-xl text-[11px] text-black dark:text-white placeholder-neutral-400 focus:outline-none"
-                    />
                   </div>
                 </div>
 
@@ -470,6 +457,22 @@ export const AuthModal: React.FC = () => {
                       </option>
                     ))}
                   </select>
+
+                  {(selectedUniversity === "Other" || selectedUniversity === "Other (Custom / Unlisted)") && (
+                    <div className="pt-1.5 space-y-1">
+                      <label className="text-neutral-700 dark:text-neutral-300 uppercase text-[9px] font-bold">
+                        Type Your University Name (Compulsory) *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. NUTECH, Dawood UET, GCU, etc."
+                        value={customUniversity}
+                        onChange={(e) => setCustomUniversity(e.target.value)}
+                        className="w-full px-4 py-2 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-300 dark:border-neutral-700 rounded-full text-black dark:text-white text-xs focus:border-black dark:focus:border-white focus:outline-none"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-1">
@@ -565,7 +568,7 @@ export const AuthModal: React.FC = () => {
                     type="submit"
                     className="w-full py-3 bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black font-semibold rounded-full shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    <span>Send SMS Verification Code</span>
+                    <span>Send Email Verification Code</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
