@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma, { ensureDbSchema } from "@/lib/prisma";
+import { prisma, ensureDbSchema } from "@/lib/prisma";
 
 interface GoogleTokenInfo {
   aud?: string;
