@@ -30,7 +30,7 @@ interface AuthContextType {
   closeAuthModal: () => void;
   setAuthModalView: (view: "login" | "signup" | "otp" | "verify_student") => void;
   loginWithEmailOrPhone: (identifier: string, password?: string, university?: string) => Promise<boolean>;
-  sendPhoneOtp: (phoneNumber: string) => Promise<string>;
+  sendPhoneOtp: (phoneNumber: string, explicitSignupData?: PendingSignupData) => Promise<string>;
   verifyOtp: (code: string) => Promise<boolean>;
   verifyStudentBadge: (studentIdOrEduEmail: string) => Promise<boolean>;
   logout: () => void;
@@ -136,24 +136,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const sendPhoneOtp = async (phoneNumber: string): Promise<string> => {
+  const sendPhoneOtp = async (phoneNumber: string, explicitSignupData?: PendingSignupData): Promise<string> => {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     setGeneratedOtp(code);
 
-    try {
-      if (pendingSignupData) {
+    const dataToSend = explicitSignupData || pendingSignupData;
+    if (dataToSend) {
+      try {
         const res = await fetch("/api/auth/signup", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(pendingSignupData),
+          body: JSON.stringify(dataToSend),
         });
         const json = await res.json();
+        console.log("[AUTH CONTEXT] Signup dispatch response:", json);
+        if (!res.ok || !json.success) {
+          throw new Error(json.error || "Failed to dispatch verification code");
+        }
         if (json.data?.otpCode) {
           setGeneratedOtp(json.data.otpCode);
+          return json.data.otpCode;
         }
+      } catch (e: any) {
+        console.error("[AUTH CONTEXT] Error calling /api/auth/signup:", e);
+        throw e;
       }
-    } catch (e) {
-      console.error("SMS OTP dispatch error:", e);
     }
 
     return code;

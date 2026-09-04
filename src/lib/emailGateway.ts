@@ -36,7 +36,7 @@ export async function dispatchEmailOtp(
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: process.env.RESEND_FROM_EMAIL || "TECHLO <verify@techlo.store>",
+          from: process.env.RESEND_FROM_EMAIL || "TECHLO <verify@send.techlo.store>",
           to: [cleanEmail],
           subject: `${otpCode} is your TECHLO verification code`,
           html: `
@@ -66,9 +66,10 @@ export async function dispatchEmailOtp(
 
       const resData = await response.json();
       if (!response.ok) {
-        console.warn("[RESEND WARNING]:", resData);
-        // Do not throw error so registration continues gracefully
+        console.error("[RESEND DISPATCH ERROR]:", resData);
+        return { success: false, error: resData.message || "Failed to dispatch email", otpCode };
       } else {
+        console.log("[RESEND DISPATCH SUCCESS]: Message ID:", resData.id);
         return { success: true, messageId: resData.id, otpCode };
       }
     }

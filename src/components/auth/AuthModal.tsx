@@ -142,7 +142,7 @@ export const AuthModal: React.FC = () => {
       return;
     }
 
-    setPendingSignupData({
+    const signupPayload = {
       fullName: fullName.trim(),
       email: trimmedEmail,
       phoneNumber: formattedPhone,
@@ -152,13 +152,15 @@ export const AuthModal: React.FC = () => {
       eduEmail: eduEmail.trim() || trimmedEmail,
       city: campusCity.split("/")[0].trim() || "Islamabad",
       avatarColor: avatarColor || "cyan",
-    });
+    };
+
+    setPendingSignupData(signupPayload);
 
     try {
-      await sendPhoneOtp(formattedPhone);
+      await sendPhoneOtp(formattedPhone, signupPayload);
       setAuthModalView("otp");
     } catch (err: any) {
-      setSignupError("Failed to dispatch verification code. Try again.");
+      setSignupError(err?.message || "Failed to dispatch verification code. Try again.");
     }
   };
 
