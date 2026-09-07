@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { ProductListing } from "@/lib/types";
 import { formatPKR, getConditionBadge, getCategoryLabel } from "@/lib/utils";
@@ -12,6 +12,7 @@ import {
   MapPin,
   ShieldCheck,
   ArrowUpRight,
+  PackageCheck,
 } from "lucide-react";
 
 interface ProductCardProps {
@@ -19,9 +20,46 @@ interface ProductCardProps {
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
-  const { savedProductIds, toggleSaveProduct } = useAuth();
+  const { user, savedProductIds, toggleSaveProduct, refreshData } = useAuth();
   const isSaved = savedProductIds.includes(product.id);
+  const [listingStatus, setListingStatus] = useState(product.status);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [statusError, setStatusError] = useState("");
+  const isSold = listingStatus === "sold";
+  const isOwner = Boolean(user?.id && user.id === product.seller?.id);
   const conditionInfo = getConditionBadge(product.condition);
+
+  useEffect(() => {
+    setListingStatus(product.status);
+  }, [product.status]);
+
+  const handleListingStatus = async () => {
+    const nextStatus = isSold ? "available" : "sold";
+    setIsUpdatingStatus(true);
+    setStatusError("");
+
+    try {
+      const response = await fetch(`/api/products/${product.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error || "Could not update this listing.");
+      }
+
+      setListingStatus(nextStatus);
+      await refreshData();
+    } catch (error) {
+      setStatusError(
+        error instanceof Error ? error.message : "Could not update this listing."
+      );
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
 
   const rawPhone = product.seller?.phone || product.seller?.phoneNumber;
   const sellerName = product.seller?.name || product.seller?.fullName || "Seller";
@@ -41,8 +79,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <img
           src={product.images[0] || "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80"}
           alt={product.title}
-          className="w-full h-full object-cover object-center group-hover:scale-102 transition-transform duration-300"
+          className={`w-full h-full object-cover object-center group-hover:scale-102 transition-transform duration-300 ${isSold ? "grayscale opacity-70" : ""}`}
         />
+
+        {isSold && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/45">
+            <span className="rounded-full border border-white/30 bg-black/80 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.2em] text-white">
+              Sold
+            </span>
+          </div>
+        )}
 
         {/* Condition Tag Badge */}
         <div className="absolute top-3 left-3 z-10">
@@ -148,16 +194,23 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             <ArrowUpRight className="w-3 h-3 text-neutral-400" />
           </Link>
 
-          <Link
-            href={webChatUrl}
-            className="w-full py-1.5 px-2 rounded-xl bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black flex items-center justify-center gap-1 transition-colors font-medium"
-            title="Chat with the seller on TECHLO"
-          >
-            <MessageCircle className="w-3 h-3" />
-            <span>Live Chat</span>
-          </Link>
+          {isSold ? (
+            <div className="flex w-full items-center justify-center gap-1 rounded-xl bg-neutral-200 px-2 py-1.5 font-medium text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
+              <PackageCheck className="h-3 w-3" />
+              <span>Sold</span>
+            </div>
+          ) : (
+            <Link
+              href={webChatUrl}
+              className="w-full py-1.5 px-2 rounded-xl bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black flex items-center justify-center gap-1 transition-colors font-medium"
+              title="Chat with the seller on TECHLO"
+            >
+              <MessageCircle className="w-3 h-3" />
+              <span>Live Chat</span>
+            </Link>
+          )}
 
-          {hasVisiblePhone && (
+          {!isSold && hasVisiblePhone && (
             <a
               href={whatsappUrl}
               target="_blank"
@@ -167,6 +220,31 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               <MessageCircle className="w-3 h-3" />
               <span>WhatsApp</span>
             </a>
+          )}
+
+          {isOwner && (
+            <button
+              type="button"
+              onClick={handleListingStatus}
+              disabled={isUpdatingStatus}
+              className={`col-span-2 w-full rounded-xl border px-2 py-1.5 font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                isSold
+                  ? "border-emerald-600 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-300"
+                  : "border-red-500/70 bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-950/30 dark:text-red-300"
+              }`}
+            >
+              {isUpdatingStatus
+                ? "Updating..."
+                : isSold
+                  ? "Mark as available"
+                  : "Mark as sold"}
+            </button>
+          )}
+
+          {statusError && (
+            <p className="col-span-2 text-center text-[11px] text-red-600 dark:text-red-400">
+              {statusError}
+            </p>
           )}
         </div>
       </div>
