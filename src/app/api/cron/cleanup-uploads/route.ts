@@ -56,12 +56,12 @@ export async function GET(req: NextRequest) {
     });
 
     const configuredRetentionDays = Number.parseInt(
-      process.env.SOLD_LISTING_RETENTION_DAYS || "30",
+      process.env.SOLD_LISTING_RETENTION_DAYS || "1",
       10
     );
     const soldRetentionDays = Number.isFinite(configuredRetentionDays)
       ? Math.min(Math.max(configuredRetentionDays, 1), 3650)
-      : 30;
+      : 1;
     const soldCutoff = new Date(
       Date.now() - soldRetentionDays * 24 * 60 * 60 * 1000
     );
