@@ -4,6 +4,13 @@ import { isApprovedImageUrl } from "@/lib/r2";
 import { getServerSession } from "@/lib/session";
 import { normalizeWhatsappNumber } from "@/lib/whatsapp";
 
+const CATEGORIES = new Set(["microcontrollers", "sensors", "motors_actuators", "power_bms", "wireless_iot", "displays", "test_tools", "passives_ics", "robotics_chassis", "development_boards"]);
+const CONDITIONS = new Set(["brand_new", "fyp_tested", "gently_used", "desoldered_working", "for_parts"]);
+
+function parseJson(value: string | null, fallback: unknown) {
+  try { return value ? JSON.parse(value) : fallback; } catch { return fallback; }
+}
+
 export async function GET(req: NextRequest) {
   try {
     await ensureDbSchema();
@@ -64,7 +71,6 @@ export async function GET(req: NextRequest) {
           select: {
             id: true,
             fullName: true,
-            email: true,
             phoneNumber: true,
             university: true,
             campus: true,
@@ -95,9 +101,9 @@ export async function GET(req: NextRequest) {
       originalPricePkr: p.originalPricePkr,
       isNegotiable: p.isNegotiable,
       showPhoneNumber: p.showPhoneNumber ?? true,
-      images: JSON.parse(p.imagesJson || "[]"),
+      images: parseJson(p.imagesJson, []),
       description: p.description,
-      specs: p.specsJson ? JSON.parse(p.specsJson) : {},
+      specs: parseJson(p.specsJson, {}),
       quantityAvailable: p.quantityAvailable,
       status: p.status,
       location: p.location,
@@ -105,7 +111,6 @@ export async function GET(req: NextRequest) {
       seller: {
         id: p.seller.id,
         name: p.seller.fullName,
-        email: p.seller.email,
         phone: publicPhone || undefined,
         phoneNumber: publicPhone || undefined,
         university: p.seller.university,
@@ -122,13 +127,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: true, count: formattedProducts.length, data: formattedProducts });
   } catch (error: any) {
     console.error("GET /api/products error:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Unable to load listings" }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    await ensureDbSchema();
     const session = getServerSession(req);
     if (!session) {
       return NextResponse.json(
@@ -136,6 +140,7 @@ export async function POST(req: NextRequest) {
         { status: 401 }
       );
     }
+    await ensureDbSchema();
 
     const body = await req.json();
     const {
@@ -155,9 +160,19 @@ export async function POST(req: NextRequest) {
       draftId,
     } = body;
 
-    if (!title || !category || !condition || !pricePkr || !description) {
+    const price = Number(pricePkr);
+    const originalPrice = originalPricePkr === "" || originalPricePkr == null ? null : Number(originalPricePkr);
+    const quantity = Number(quantityAvailable || 1);
+    if (
+      typeof title !== "string" || title.trim().length < 3 || title.trim().length > 120 ||
+      typeof description !== "string" || description.trim().length < 10 || description.trim().length > 5000 ||
+      !CATEGORIES.has(category) || !CONDITIONS.has(condition) ||
+      !Number.isFinite(price) || price <= 0 || price > 100_000_000 ||
+      (originalPrice !== null && (!Number.isFinite(originalPrice) || originalPrice <= 0 || originalPrice > 100_000_000)) ||
+      !Number.isInteger(quantity) || quantity < 1 || quantity > 999
+    ) {
       return NextResponse.json(
-        { success: false, error: "Missing required fields for hardware listing" },
+        { success: false, error: "Listing details are invalid or outside allowed limits" },
         { status: 400 }
       );
     }
@@ -222,23 +237,25 @@ export async function POST(req: NextRequest) {
 
     const createdProduct = await prisma.product.create({
       data: {
-        title,
+        title: title.trim(),
         category,
         condition,
-        pricePkr: parseFloat(pricePkr),
-        originalPricePkr: originalPricePkr ? parseFloat(originalPricePkr) : null,
+        pricePkr: price,
+        originalPricePkr: originalPrice,
         isNegotiable: Boolean(isNegotiable),
         showPhoneNumber: Boolean(showPhoneNumber),
         imagesJson: JSON.stringify(finalImages),
-        description,
+        description: description.trim(),
         specsJson: specs ? JSON.stringify(specs) : null,
-        quantityAvailable: quantityAvailable ? parseInt(quantityAvailable) : 1,
+        quantityAvailable: quantity,
         location: location || "Campus Pickup",
         city: city || "Islamabad",
         sellerId: session.userId,
       },
       include: {
-        seller: true,
+        seller: {
+          select: { id: true, fullName: true, university: true },
+        },
       },
     });
 
@@ -278,6 +295,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, data: createdProduct }, { status: 201 });
   } catch (error: any) {
     console.error("POST /api/products error:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Unable to publish listing" }, { status: 500 });
   }
 }

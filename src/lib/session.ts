@@ -1,8 +1,7 @@
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 
-const JWT_SECRET = process.env.JWT_SECRET || "techlo-pakistan-secure-secret-token-key-2026";
-const COOKIE_NAME = "techlo_session";
+const COOKIE_NAME = process.env.NODE_ENV === "production" ? "__Host-techlo_session" : "techlo_session";
 const SESSION_EXPIRY_SECONDS = 7 * 24 * 60 * 60; // 7 days
 
 export interface SessionUser {
@@ -30,6 +29,19 @@ function base64UrlDecode(str: string): string {
   return Buffer.from(base64, "base64").toString("utf8");
 }
 
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET?.trim();
+  if (secret && secret.length >= 32) return secret;
+  if (process.env.NODE_ENV !== "production") {
+    return "techlo-development-only-session-secret";
+  }
+  throw new Error("JWT_SECRET must be configured with at least 32 characters");
+}
+
+function sign(value: string): Buffer {
+  return crypto.createHmac("sha256", getJwtSecret()).update(value).digest();
+}
+
 /**
  * Creates a signed HS256 JWT session token
  */
@@ -47,9 +59,7 @@ export function createSessionToken(user: { id: string; email?: string; phoneNumb
     })
   );
 
-  const signature = base64UrlEncode(
-    crypto.createHmac("sha256", JWT_SECRET).update(`${header}.${payload}`).digest("base64")
-  );
+  const signature = sign(`${header}.${payload}`).toString("base64url");
 
   return `${header}.${payload}.${signature}`;
 }
@@ -64,17 +74,26 @@ export function verifySessionToken(token: string): SessionUser | null {
     if (parts.length !== 3) return null;
 
     const [header, payload, signature] = parts;
-    const expectedSignature = base64UrlEncode(
-      crypto.createHmac("sha256", JWT_SECRET).update(`${header}.${payload}`).digest("base64")
-    );
+    const decodedHeader = JSON.parse(base64UrlDecode(header));
+    if (decodedHeader?.alg !== "HS256" || decodedHeader?.typ !== "JWT") return null;
 
-    if (signature !== expectedSignature) {
+    const expectedSignature = sign(`${header}.${payload}`);
+    const suppliedSignature = Buffer.from(signature, "base64url");
+    if (
+      suppliedSignature.length !== expectedSignature.length ||
+      !crypto.timingSafeEqual(suppliedSignature, expectedSignature)
+    ) {
       return null;
     }
 
     const decodedPayload = JSON.parse(base64UrlDecode(payload)) as SessionUser;
     const now = Math.floor(Date.now() / 1000);
-    if (decodedPayload.exp && decodedPayload.exp < now) {
+    if (
+      !decodedPayload.userId ||
+      typeof decodedPayload.userId !== "string" ||
+      !decodedPayload.exp ||
+      decodedPayload.exp <= now
+    ) {
       return null; // Expired
     }
 

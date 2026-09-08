@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma, ensureDbSchema } from "@/lib/prisma";
 import { generateSecureOtp, dispatchSmsOtp } from "@/lib/smsGateway";
 import { dispatchEmailOtp } from "@/lib/emailGateway";
+import { hashPassword, validatePassword } from "@/lib/password";
+import { normalizeWhatsappNumber } from "@/lib/whatsapp";
 
 export async function POST(req: NextRequest) {
   try {
@@ -49,13 +51,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const cleanPhone = phoneNumber.replace(/[^0-9+]/g, "").trim();
-    if (cleanPhone.length < 10) {
+    const normalizedPhone = normalizeWhatsappNumber(phoneNumber);
+    if (!normalizedPhone) {
       return NextResponse.json(
         { success: false, error: "Please enter a valid Pakistani mobile number (+92 3XX XXXXXXX)" },
         { status: 400 }
       );
     }
+    const cleanPhone = `+${normalizedPhone}`;
 
     // Regular email validation (no university email requirement)
     if (!email || !email.trim() || !email.includes("@")) {
@@ -67,32 +70,64 @@ export async function POST(req: NextRequest) {
 
     const finalEmail = email.toLowerCase().trim();
     const cleanGender = gender.toLowerCase().trim();
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      return NextResponse.json({ success: false, error: passwordError }, { status: 400 });
+    }
+
+    const existing = await prisma.user.findFirst({
+      where: { OR: [{ phoneNumber: cleanPhone }, { email: finalEmail }] },
+    });
+    if (existing?.isPhoneVerified) {
+      return NextResponse.json(
+        { success: false, error: "An account already exists with this phone number or email" },
+        { status: 409 }
+      );
+    }
+    if (existing && (existing.email !== finalEmail || existing.phoneNumber !== cleanPhone)) {
+      return NextResponse.json(
+        { success: false, error: "An account already exists with this phone number or email" },
+        { status: 409 }
+      );
+    }
+    if (
+      existing?.otpLastSentAt &&
+      existing.otpLastSentAt.getTime() > Date.now() - 60 * 1000
+    ) {
+      return NextResponse.json(
+        { success: false, error: "Please wait before requesting another verification code" },
+        { status: 429, headers: { "Retry-After": "60" } }
+      );
+    }
 
     // 2. Generate cryptographically secure 6-digit OTP code
     const generatedOtp = generateSecureOtp();
     const otpExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
 
     // 3. Upsert or register student in database
-    const user = await prisma.user.upsert({
-      where: { phoneNumber: cleanPhone },
-      update: {
+    const accountData = {
         fullName: fullName.trim(),
         email: finalEmail,
-        passwordHash: password || "student123",
+        passwordHash: hashPassword(password),
         university,
         campus: campus || `${university} Main Campus`,
         gender: cleanGender,
         studentIdOrEduEmail: eduEmail || null,
         otpCode: generatedOtp,
         otpExpiresAt: otpExpires,
+        otpAttempts: 0,
+        otpLastSentAt: new Date(),
         city: city || "Islamabad",
         avatarUrl: avatarUrl || undefined,
         avatarColor: avatarColor || "cyan",
-      },
-      create: {
+    };
+    const user = existing
+      ? await prisma.user.update({ where: { id: existing.id }, data: accountData })
+      : await prisma.user.create({
+      data: {
         fullName: fullName.trim(),
         email: finalEmail,
-        passwordHash: password || "student123",
+        passwordHash: hashPassword(password),
         phoneNumber: cleanPhone,
         university,
         campus: campus || `${university} Main Campus`,
@@ -100,6 +135,8 @@ export async function POST(req: NextRequest) {
         studentIdOrEduEmail: eduEmail || null,
         otpCode: generatedOtp,
         otpExpiresAt: otpExpires,
+        otpAttempts: 0,
+        otpLastSentAt: new Date(),
         isPhoneVerified: false,
         isVerifiedStudent: finalEmail.endsWith(".edu.pk") || false,
         city: city || "Islamabad",
@@ -123,7 +160,13 @@ export async function POST(req: NextRequest) {
     } catch (e) {}
 
     // 5. Dispatch OTP via Free Email Gateway (Resend)
-    await dispatchEmailOtp(finalEmail, generatedOtp, user.fullName);
+    const emailResult = await dispatchEmailOtp(finalEmail, generatedOtp, user.fullName);
+    if (!emailResult.success) {
+      return NextResponse.json(
+        { success: false, error: "Unable to deliver the verification email. Please try again later." },
+        { status: 502 }
+      );
+    }
 
     // Also trigger SMS gateway if a real provider is set
     if (process.env.SMS_PROVIDER && process.env.SMS_PROVIDER !== "local") {
@@ -139,11 +182,11 @@ export async function POST(req: NextRequest) {
         email: finalEmail,
         university: user.university,
         gender: cleanGender,
-        otpCode: generatedOtp,
+        ...(process.env.NODE_ENV !== "production" ? { otpCode: generatedOtp } : {}),
       },
     });
   } catch (error: any) {
     console.error("POST /api/auth/signup error:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Unable to create account" }, { status: 500 });
   }
 }

@@ -5,7 +5,7 @@ import { attachSessionCookie } from "@/lib/session";
 export async function POST(req: NextRequest) {
   try {
     await ensureDbSchema();
-    const { phoneNumber, email, otpCode, expectedOtp, fullName, university, gender } = await req.json();
+    const { phoneNumber, email, otpCode } = await req.json();
 
     const cleanInputCode = (otpCode || "").toString().trim();
     if ((!phoneNumber && !email) || !cleanInputCode) {
@@ -27,49 +27,47 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Check code matches: database code, session generated code, or master demo bypass 123456
-    const isMasterDemoCode = cleanInputCode === "123456";
-    const isMatchingDbCode = user?.otpCode && user.otpCode.trim() === cleanInputCode;
-    const isMatchingExpected = expectedOtp && expectedOtp.toString().trim() === cleanInputCode;
-
-    const isCodeValid = isMasterDemoCode || isMatchingDbCode || isMatchingExpected;
-
-    if (!isCodeValid) {
+    if (!user) {
       return NextResponse.json(
-        { success: false, error: "Invalid verification code entered" },
+        { success: false, error: "Invalid or expired verification code" },
         { status: 400 }
       );
     }
 
-    // If user record wasn't found (e.g. cross-instance serverless lambda cold start), create it now
-    if (!user) {
-      user = await prisma.user.upsert({
-        where: { phoneNumber: cleanPhone || `temp_${Date.now()}` },
-        update: {
-          email: cleanEmail,
-          isPhoneVerified: true,
-          otpCode: null,
-        },
-        create: {
-          fullName: fullName || "Student",
-          email: cleanEmail || `student_${Date.now()}@techlo.store`,
-          phoneNumber: cleanPhone || `+923000000000`,
-          university: university || "Pakistani University",
-          gender: gender || "unspecified",
-          isPhoneVerified: true,
-          otpCode: null,
-        },
-      });
-    } else {
-      // Mark verified in DB
-      user = await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          isPhoneVerified: true,
-          otpCode: null,
-        },
-      });
+    if (user.otpAttempts >= 5) {
+      return NextResponse.json(
+        { success: false, error: "Too many attempts. Request a new verification code." },
+        { status: 429 }
+      );
     }
+
+    const isCodeValid = Boolean(
+      user.otpCode &&
+        user.otpExpiresAt &&
+        user.otpExpiresAt.getTime() > Date.now() &&
+        user.otpCode.trim() === cleanInputCode
+    );
+
+    if (!isCodeValid) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { otpAttempts: { increment: 1 } },
+      });
+      return NextResponse.json(
+        { success: false, error: "Invalid or expired verification code" },
+        { status: 400 }
+      );
+    }
+
+    user = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        isPhoneVerified: true,
+        otpCode: null,
+        otpExpiresAt: null,
+        otpAttempts: 0,
+      },
+    });
 
     const safeUser = {
       id: user.id,
@@ -104,6 +102,6 @@ export async function POST(req: NextRequest) {
     return response;
   } catch (error: any) {
     console.error("POST /api/auth/verify-otp error:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Unable to verify account" }, { status: 500 });
   }
 }

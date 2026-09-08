@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma, ensureDbSchema } from "@/lib/prisma";
 import { getServerSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +11,7 @@ export async function GET(req: NextRequest) {
     if (!session) {
       return NextResponse.json({ success: false, error: "Authentication required" }, { status: 401 });
     }
+    await ensureDbSchema();
 
     const { searchParams } = new URL(req.url);
     const conversationId = searchParams.get("conversationId");
@@ -58,7 +59,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: true, data: messages });
   } catch (error: any) {
     console.error("GET /api/chat/messages error:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Unable to load messages" }, { status: 500 });
   }
 }
 
@@ -69,10 +70,11 @@ export async function POST(req: NextRequest) {
     if (!session) {
       return NextResponse.json({ success: false, error: "Authentication required" }, { status: 401 });
     }
+    await ensureDbSchema();
 
     const { conversationId, content } = await req.json();
 
-    if (!conversationId || !content?.trim()) {
+    if (typeof conversationId !== "string" || conversationId.length > 100 || typeof content !== "string" || !content.trim() || content.trim().length > 2000) {
       return NextResponse.json(
         { success: false, error: "conversationId and content are required" },
         { status: 400 }
@@ -89,6 +91,13 @@ export async function POST(req: NextRequest) {
 
     if (!conversation) {
       return NextResponse.json({ success: false, error: "Conversation not found" }, { status: 404 });
+    }
+
+    const recentMessageCount = await prisma.chatMessage.count({
+      where: { senderId: session.userId, createdAt: { gte: new Date(Date.now() - 60_000) } },
+    });
+    if (recentMessageCount >= 20) {
+      return NextResponse.json({ success: false, error: "Message rate limit exceeded" }, { status: 429 });
     }
 
     const message = await prisma.chatMessage.create({
@@ -113,6 +122,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, data: message });
   } catch (error: any) {
     console.error("POST /api/chat/messages error:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Unable to send message" }, { status: 500 });
   }
 }

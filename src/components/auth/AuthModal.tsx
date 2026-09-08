@@ -70,6 +70,7 @@ export const AuthModal: React.FC = () => {
   const [studentInput, setStudentInput] = useState("");
   const [isVerifyingStudent, setIsVerifyingStudent] = useState(false);
   const [studentVerifiedSuccess, setStudentVerifiedSuccess] = useState(false);
+  const [studentVerifyError, setStudentVerifyError] = useState("");
 
   useEffect(() => {
     if (!isAuthModalOpen || !["login", "signup"].includes(authModalView)) {
@@ -215,8 +216,8 @@ export const AuthModal: React.FC = () => {
       return;
     }
 
-    if (!signupPassword || signupPassword.length < 6) {
-      setSignupError("Password must be at least 6 characters");
+    if (!signupPassword || signupPassword.length < 8 || !/[A-Za-z]/.test(signupPassword) || !/\d/.test(signupPassword)) {
+      setSignupError("Password must be 8–128 characters and include a letter and a number");
       return;
     }
 
@@ -230,6 +231,7 @@ export const AuthModal: React.FC = () => {
       eduEmail: eduEmail.trim() || trimmedEmail,
       city: campusCity.split("/")[0].trim() || "Islamabad",
       avatarColor: avatarColor || "cyan",
+      password: signupPassword,
     };
 
     setPendingSignupData(signupPayload);
@@ -242,18 +244,22 @@ export const AuthModal: React.FC = () => {
     }
   };
 
-  const handleStudentVerificationSubmit = (e: React.FormEvent) => {
+  const handleStudentVerificationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!studentInput) return;
     setIsVerifyingStudent(true);
-    setTimeout(() => {
-      verifyStudentBadge(studentInput);
+    setStudentVerifyError("");
+    try {
+      await verifyStudentBadge(studentInput);
       setIsVerifyingStudent(false);
       setStudentVerifiedSuccess(true);
       setTimeout(() => {
         closeAuthModal();
       }, 1000);
-    }, 600);
+    } catch (error: any) {
+      setIsVerifyingStudent(false);
+      setStudentVerifyError(error?.message || "Unable to submit verification request");
+    }
   };
 
   return (
@@ -283,12 +289,13 @@ export const AuthModal: React.FC = () => {
               <p className="text-xs text-neutral-500">
                 Unlock verified campus badge across Pakistani universities.
               </p>
+              {studentVerifyError && <p className="text-xs text-red-500">{studentVerifyError}</p>}
             </div>
 
             {studentVerifiedSuccess ? (
               <div className="p-6 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200/80 dark:border-neutral-800/80 rounded-2xl text-center space-y-2">
                 <Check className="w-10 h-10 text-emerald-500 mx-auto" />
-                <h4 className="text-sm font-bold text-black dark:text-white">Student Badge Activated</h4>
+                <h4 className="text-sm font-bold text-black dark:text-white">Request Submitted for Review</h4>
               </div>
             ) : (
               <form onSubmit={handleStudentVerificationSubmit} className="space-y-3 text-xs">

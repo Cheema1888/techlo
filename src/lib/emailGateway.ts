@@ -2,7 +2,6 @@ export interface EmailSendResult {
   success: boolean;
   messageId?: string;
   error?: string;
-  otpCode: string;
 }
 
 /**
@@ -19,12 +18,11 @@ export async function dispatchEmailOtp(
   const cleanEmail = email.toLowerCase().trim();
   const resendApiKey = process.env.RESEND_API_KEY;
 
-  console.log(`\n======================================================`);
-  console.log(`📧 [TECHLO EMAIL OTP GATEWAY]`);
-  console.log(`To: ${fullName} <${cleanEmail}>`);
-  console.log(`Subject: Your TECHLO Verification Code: [ ${otpCode} ]`);
-  console.log(`Message: Welcome to TECHLO! Your 6-digit verification code is ${otpCode}. Valid for 15 minutes.`);
-  console.log(`======================================================\n`);
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`[DEV EMAIL OTP] ${cleanEmail}: ${otpCode}`);
+  }
+
+  const safeName = fullName.replace(/[<>&"']/g, "");
 
   try {
     // 1. Resend Free Tier Integration (if RESEND_API_KEY is configured in Vercel)
@@ -46,7 +44,7 @@ export async function dispatchEmailOtp(
                 <span style="font-size: 11px; color: #888888; font-family: monospace; margin-left: 8px;">a product of arix</span>
               </div>
               
-              <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 12px; color: #FFFFFF;">Welcome, ${fullName}!</h2>
+              <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 12px; color: #FFFFFF;">Welcome, ${safeName}!</h2>
               <p style="font-size: 14px; color: #A3A3A3; line-height: 1.6; margin-bottom: 24px;">
                 Thank you for joining Pakistan's student hardware exchange. Use the security code below to activate your account:
               </p>
@@ -67,17 +65,19 @@ export async function dispatchEmailOtp(
       const resData = await response.json();
       if (!response.ok) {
         console.error("[RESEND DISPATCH ERROR]:", resData);
-        return { success: false, error: resData.message || "Failed to dispatch email", otpCode };
+        return { success: false, error: resData.message || "Failed to dispatch email" };
       } else {
         console.log("[RESEND DISPATCH SUCCESS]: Message ID:", resData.id);
-        return { success: true, messageId: resData.id, otpCode };
+        return { success: true, messageId: resData.id };
       }
     }
 
-    return { success: true, messageId: `local_email_${Date.now()}`, otpCode };
+    if (process.env.NODE_ENV === "production") {
+      return { success: false, error: "Email delivery is not configured" };
+    }
+    return { success: true, messageId: `local_email_${Date.now()}` };
   } catch (error: any) {
     console.error("[EMAIL GATEWAY ERROR]:", error);
-    // Still return success in local/fallback mode so registration isn't blocked
-    return { success: true, messageId: `fallback_${Date.now()}`, otpCode };
+    return { success: false, error: "Email delivery failed" };
   }
 }

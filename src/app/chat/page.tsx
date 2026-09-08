@@ -453,6 +453,7 @@ function ChatContent() {
                   <Link
                     href={`/marketplace/${activeConversation.product.id}`}
                     target="_blank"
+                    rel="noopener noreferrer"
                     className="hidden sm:flex items-center gap-2 p-1.5 px-3 rounded-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 text-xs hover:border-black dark:hover:border-white transition-colors"
                   >
                     <span className="font-semibold text-neutral-800 dark:text-neutral-200 truncate max-w-[120px]">

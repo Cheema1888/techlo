@@ -4,7 +4,6 @@ export interface SmsSendResult {
   success: boolean;
   messageId?: string;
   error?: string;
-  otpCode: string;
 }
 
 /**
@@ -28,7 +27,9 @@ export async function dispatchSmsOtp(
 
   const messageText = `TECHLO: Your verification security code is ${otpCode}. Valid for 10 minutes. Do not share this code with anyone. (a product of arix)`;
 
-  console.log(`[SMS GATEWAY - ${provider.toUpperCase()}] Sending OTP ${otpCode} to ${cleanPhone}`);
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`[DEV SMS OTP - ${provider.toUpperCase()}] ${cleanPhone}: ${otpCode}`);
+  }
 
   try {
     // 1. Twilio SMS Gateway (if configured)
@@ -55,7 +56,7 @@ export async function dispatchSmsOtp(
         throw new Error(data.message || "Twilio SMS failed to send");
       }
 
-      return { success: true, messageId: data.sid, otpCode };
+      return { success: true, messageId: data.sid };
     }
 
     // 2. Pakistani Branded SMS Gateway (BrandSMS.pk / Jazz / Telenor API)
@@ -70,20 +71,17 @@ export async function dispatchSmsOtp(
       const res = await fetch(url);
       const data = await res.json();
 
-      return { success: true, messageId: data.message_id || "brandsms_ok", otpCode };
+      if (!res.ok) throw new Error(data.message || "SMS gateway request failed");
+      return { success: true, messageId: data.message_id || "brandsms_ok" };
     }
 
     // 3. Local Development Mode (Console & In-App verification)
-    console.log(`\n======================================================`);
-    console.log(`📱 [TECHLO SMS DISPATCH GATEWAY]`);
-    console.log(`To: ${cleanPhone}`);
-    console.log(`Message: ${messageText}`);
-    console.log(`Security Code: [ ${otpCode} ]`);
-    console.log(`======================================================\n`);
-
-    return { success: true, messageId: `local_${Date.now()}`, otpCode };
+    if (process.env.NODE_ENV === "production") {
+      return { success: false, error: "SMS delivery is not configured" };
+    }
+    return { success: true, messageId: `local_${Date.now()}` };
   } catch (error: any) {
     console.error("[SMS GATEWAY ERROR]:", error);
-    return { success: false, error: error.message, otpCode };
+    return { success: false, error: error.message };
   }
 }

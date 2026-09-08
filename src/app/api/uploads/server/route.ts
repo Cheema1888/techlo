@@ -11,7 +11,6 @@ const MAX_IMAGES_PER_LISTING = 4;
 
 export async function POST(req: NextRequest) {
   try {
-    await ensureDbSchema();
     const session = getServerSession(req);
     if (!session) {
       return NextResponse.json(
@@ -19,6 +18,7 @@ export async function POST(req: NextRequest) {
         { status: 401 }
       );
     }
+    await ensureDbSchema();
 
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
@@ -149,7 +149,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error("POST /api/uploads/server error:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Failed to upload image" },
+      { success: false, error: "Failed to upload image" },
       { status: 500 }
     );
   }

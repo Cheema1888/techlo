@@ -9,6 +9,7 @@ interface GoogleTokenInfo {
   email_verified?: string;
   name?: string;
   picture?: string;
+  iss?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -46,6 +47,7 @@ export async function POST(request: NextRequest) {
 
     if (
       cleanAud !== cleanClientId ||
+      !["accounts.google.com", "https://accounts.google.com"].includes(tokenInfo.iss || "") ||
       tokenInfo.email_verified !== "true" ||
       !tokenInfo.email ||
       !tokenInfo.sub

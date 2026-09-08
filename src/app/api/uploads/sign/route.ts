@@ -9,7 +9,6 @@ const MAX_IMAGES_PER_LISTING = 4;
 
 export async function POST(req: NextRequest) {
   try {
-    await ensureDbSchema();
     const session = getServerSession(req);
     if (!session) {
       return NextResponse.json(
@@ -17,6 +16,7 @@ export async function POST(req: NextRequest) {
         { status: 401 }
       );
     }
+    await ensureDbSchema();
 
     const body = await req.json();
     const { draftId, contentType, size, position } = body;
@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error("POST /api/uploads/sign error:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Failed to generate upload authorization" },
+      { success: false, error: "Failed to generate upload authorization" },
       { status: 500 }
     );
   }

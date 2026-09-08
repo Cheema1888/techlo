@@ -19,26 +19,32 @@ if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
  */
 export async function ensureDbSchema(): Promise<void> {
   if (globalForPrisma.schemaEnsured) return;
-  try {
-    await prisma.$executeRawUnsafe(
-      `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "gender" TEXT DEFAULT 'unspecified';`
-    );
-  } catch {}
-  try {
-    await prisma.$executeRawUnsafe(
-      `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "avatarColor" TEXT DEFAULT 'cyan';`
-    );
-  } catch {}
-  try {
-    await prisma.$executeRawUnsafe(
-      `ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "soldAt" TIMESTAMP(3);`
-    );
-    await prisma.$executeRawUnsafe(
-      `UPDATE "Product" SET "soldAt" = "updatedAt" WHERE "status" = 'sold' AND "soldAt" IS NULL;`
-    );
-    await prisma.$executeRawUnsafe(
-      `CREATE INDEX IF NOT EXISTS "Product_status_soldAt_idx" ON "Product"("status", "soldAt");`
-    );
-  } catch {}
+  await prisma.$executeRawUnsafe(
+    `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "gender" TEXT DEFAULT 'unspecified';`
+  );
+  await prisma.$executeRawUnsafe(
+    `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "avatarColor" TEXT DEFAULT 'cyan';`
+  );
+  await prisma.$executeRawUnsafe(
+    `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "otpAttempts" INTEGER NOT NULL DEFAULT 0;`
+  );
+  await prisma.$executeRawUnsafe(
+    `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "otpLastSentAt" TIMESTAMP(3);`
+  );
+  await prisma.$executeRawUnsafe(
+    `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "loginAttempts" INTEGER NOT NULL DEFAULT 0;`
+  );
+  await prisma.$executeRawUnsafe(
+    `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "loginLockedUntil" TIMESTAMP(3);`
+  );
+  await prisma.$executeRawUnsafe(
+    `ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "soldAt" TIMESTAMP(3);`
+  );
+  await prisma.$executeRawUnsafe(
+    `UPDATE "Product" SET "soldAt" = "updatedAt" WHERE "status" = 'sold' AND "soldAt" IS NULL;`
+  );
+  await prisma.$executeRawUnsafe(
+    `CREATE INDEX IF NOT EXISTS "Product_status_soldAt_idx" ON "Product"("status", "soldAt");`
+  );
   globalForPrisma.schemaEnsured = true;
 }

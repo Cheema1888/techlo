@@ -5,11 +5,11 @@ import { normalizeWhatsappNumber } from "@/lib/whatsapp";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await ensureDbSchema();
-    const { id } = params;
+    const { id } = await params;
 
     const product = await prisma.product.findUnique({
       where: { id },
@@ -18,7 +18,6 @@ export async function GET(
           select: {
             id: true,
             fullName: true,
-            email: true,
             phoneNumber: true,
             university: true,
             campus: true,
@@ -71,7 +70,6 @@ export async function GET(
       seller: {
         id: product.seller.id,
         name: product.seller.fullName,
-        email: product.seller.email,
         phone: publicPhone || undefined,
         phoneNumber: publicPhone || undefined,
         university: product.seller.university,
@@ -88,17 +86,17 @@ export async function GET(
     return NextResponse.json({ success: true, data: formatted });
   } catch (error: any) {
     console.error("GET /api/products/[id] error:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Unable to load listing" }, { status: 500 });
   }
 }
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await ensureDbSchema();
-    const { id } = params;
+    const { id } = await params;
     const session = getServerSession(req);
     if (!session) {
       return NextResponse.json(
@@ -161,6 +159,6 @@ export async function PATCH(
     return NextResponse.json({ success: true, data: updated });
   } catch (error: any) {
     console.error("PATCH /api/products/[id] error:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Unable to update listing" }, { status: 500 });
   }
 }

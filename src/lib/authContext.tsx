@@ -14,6 +14,7 @@ interface PendingSignupData {
   city?: string;
   avatarUrl?: string;
   avatarColor?: string;
+  password: string;
 }
 
 interface AuthContextType {
@@ -21,7 +22,6 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isAuthModalOpen: boolean;
   authModalView: "login" | "signup" | "otp" | "verify_student";
-  generatedOtp: string | null;
   pendingSignupData: PendingSignupData | null;
   savedProductIds: string[];
   products: ProductListing[];
@@ -49,7 +49,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [authModalView, setAuthModalView] = useState<"login" | "signup" | "otp" | "verify_student">("login");
-  const [generatedOtp, setGeneratedOtp] = useState<string | null>(null);
   const [pendingSignupData, setPendingSignupData] = useState<PendingSignupData | null>(null);
   const [savedProductIds, setSavedProductIds] = useState<string[]>([]);
   const [products, setProducts] = useState<ProductListing[]>([]);
@@ -58,17 +57,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // On mount, load real user session if already signed in, and query live SQLite database
   useEffect(() => {
     try {
-      const storedUser = localStorage.getItem("techlo_user_session");
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
-
       const storedSaved = localStorage.getItem("techlo_saved_items");
       if (storedSaved) {
         setSavedProductIds(JSON.parse(storedSaved));
       }
 
-      refreshData();
+      void (async () => {
+        try {
+          const sessionRes = await fetch("/api/auth/session", { cache: "no-store" });
+          const sessionJson = await sessionRes.json();
+          if (sessionRes.ok && sessionJson.success && sessionJson.data?.user) {
+            setUser(sessionJson.data.user);
+            localStorage.setItem("techlo_user_session", JSON.stringify(sessionJson.data.user));
+          } else {
+            setUser(null);
+            localStorage.removeItem("techlo_user_session");
+          }
+        } finally {
+          await refreshData();
+        }
+      })();
     } catch (e) {
       console.warn("Storage access error:", e);
     }
@@ -164,9 +172,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const sendPhoneOtp = async (phoneNumber: string, explicitSignupData?: PendingSignupData): Promise<string> => {
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    setGeneratedOtp(code);
-
     const dataToSend = explicitSignupData || pendingSignupData;
     if (dataToSend) {
       try {
@@ -181,7 +186,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           throw new Error(json.error || "Failed to dispatch verification code");
         }
         if (json.data?.otpCode) {
-          setGeneratedOtp(json.data.otpCode);
           return json.data.otpCode;
         }
       } catch (e: any) {
@@ -190,7 +194,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
-    return code;
+    return "";
   };
 
   const verifyOtp = async (code: string): Promise<boolean> => {
@@ -206,10 +210,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           phoneNumber,
           email,
           otpCode: cleanCode,
-          expectedOtp: generatedOtp,
-          fullName: pendingSignupData?.fullName,
-          university: pendingSignupData?.university,
-          gender: pendingSignupData?.gender,
         }),
       });
 
@@ -220,31 +220,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (res.ok && json.success && verifiedUser) {
         setUser(verifiedUser);
         localStorage.setItem("techlo_user_session", JSON.stringify(verifiedUser));
-        closeAuthModal();
-        await refreshData();
-        return true;
-      }
-
-      // Session Fallback: If entered code matches generated code in this browser session
-      if (generatedOtp && cleanCode === generatedOtp.trim() && pendingSignupData) {
-        const fallbackUser: UserProfile = {
-          id: `usr_${Date.now()}`,
-          fullName: pendingSignupData.fullName,
-          email: pendingSignupData.email,
-          phoneNumber: pendingSignupData.phoneNumber,
-          university: pendingSignupData.university,
-          campus: pendingSignupData.campus,
-          gender: pendingSignupData.gender,
-          isPhoneVerified: true,
-          isVerifiedStudent: pendingSignupData.email.endsWith(".edu.pk"),
-          city: pendingSignupData.city || "Islamabad",
-          avatarColor: pendingSignupData.avatarColor || "cyan",
-          rating: 5.0,
-          dealsCompleted: 0,
-          role: "STUDENT",
-        };
-        setUser(fallbackUser);
-        localStorage.setItem("techlo_user_session", JSON.stringify(fallbackUser));
         closeAuthModal();
         await refreshData();
         return true;
@@ -263,21 +238,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const verifyStudentBadge = async (studentIdOrEduEmail: string): Promise<boolean> => {
     if (!user) return false;
-    const isEdu = studentIdOrEduEmail.toLowerCase().includes(".edu.pk") || studentIdOrEduEmail.length > 4;
-    if (isEdu) {
-      const updated = {
-        ...user,
-        isVerifiedStudent: true,
-        eduEmail: studentIdOrEduEmail,
-      };
-      setUser(updated);
-      localStorage.setItem("techlo_user_session", JSON.stringify(updated));
-      return true;
-    }
-    return false;
+    const response = await fetch("/api/auth/request-verification", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ studentIdOrEduEmail }),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) throw new Error(result.error || "Verification request failed");
+    const updated = { ...user, studentIdOrEduEmail, isVerifiedStudent: false };
+    setUser(updated);
+    localStorage.setItem("techlo_user_session", JSON.stringify(updated));
+    return true;
   };
 
   const logout = () => {
+    void fetch("/api/auth/logout", { method: "POST" });
     setUser(null);
     localStorage.removeItem("techlo_user_session");
   };
@@ -316,13 +291,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error("Failed to post product:", e);
     }
 
-    const fallback: ProductListing = {
-      ...productData,
-      id: "tech-" + Date.now().toString().slice(-6),
-      createdAt: new Date().toISOString(),
-    };
-    setProducts((prev) => [fallback, ...prev]);
-    return fallback;
+    throw new Error("Failed to publish listing");
   };
 
   const createServiceRequest = async (
@@ -334,7 +303,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...requestData,
-          userId: user?.id,
         }),
       });
 
@@ -349,14 +317,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error("Failed to submit service request:", e);
     }
 
-    const fallback: ServiceQuoteRequest = {
-      ...requestData,
-      id: "SRV-" + Math.floor(100000 + Math.random() * 900000),
-      createdAt: new Date().toISOString(),
-      status: "submitted",
-    };
-    setServiceRequests((prev) => [fallback, ...prev]);
-    return fallback;
+    throw new Error("Failed to submit service request");
   };
 
   return (
@@ -366,7 +327,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: !!user,
         isAuthModalOpen,
         authModalView,
-        generatedOtp,
         pendingSignupData,
         savedProductIds,
         products,

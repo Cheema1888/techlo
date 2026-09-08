@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma, ensureDbSchema } from "@/lib/prisma";
 import { getServerSession } from "@/lib/session";
 
 // GET: Fetch conversations for a specific user
@@ -9,6 +9,7 @@ export async function GET(req: NextRequest) {
     if (!session) {
       return NextResponse.json({ success: false, error: "Authentication required" }, { status: 401 });
     }
+    await ensureDbSchema();
     const userId = session.userId;
 
     const conversations = await prisma.conversation.findMany({
@@ -18,10 +19,10 @@ export async function GET(req: NextRequest) {
       include: {
         product: true,
         buyer: {
-          select: { id: true, fullName: true, university: true, avatarUrl: true, avatarColor: true, phoneNumber: true },
+          select: { id: true, fullName: true, university: true, avatarUrl: true, avatarColor: true },
         },
         seller: {
-          select: { id: true, fullName: true, university: true, avatarUrl: true, avatarColor: true, phoneNumber: true },
+          select: { id: true, fullName: true, university: true, avatarUrl: true, avatarColor: true },
         },
         messages: {
           orderBy: { createdAt: "desc" },
@@ -46,7 +47,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: true, data });
   } catch (error: any) {
     console.error("GET /api/chat/conversations error:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Unable to load conversations" }, { status: 500 });
   }
 }
 
@@ -57,6 +58,7 @@ export async function POST(req: NextRequest) {
     if (!session) {
       return NextResponse.json({ success: false, error: "Authentication required" }, { status: 401 });
     }
+    await ensureDbSchema();
 
     const { sellerId, productId } = await req.json();
     const buyerId = session.userId;
@@ -67,6 +69,20 @@ export async function POST(req: NextRequest) {
 
     if (buyerId === sellerId) {
       return NextResponse.json({ success: false, error: "Cannot chat with yourself" }, { status: 400 });
+    }
+
+    if (typeof sellerId !== "string" || sellerId.length > 100 || (productId && (typeof productId !== "string" || productId.length > 100))) {
+      return NextResponse.json({ success: false, error: "Invalid conversation details" }, { status: 400 });
+    }
+    const seller = await prisma.user.findUnique({ where: { id: sellerId }, select: { id: true } });
+    if (!seller) {
+      return NextResponse.json({ success: false, error: "Seller not found" }, { status: 404 });
+    }
+    if (productId) {
+      const product = await prisma.product.findUnique({ where: { id: productId }, select: { sellerId: true } });
+      if (!product || product.sellerId !== sellerId) {
+        return NextResponse.json({ success: false, error: "Listing does not belong to this seller" }, { status: 400 });
+      }
     }
 
     // Check if conversation already exists for this pair + product
@@ -129,6 +145,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, data: conversation });
   } catch (error: any) {
     console.error("POST /api/chat/conversations error:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Unable to start conversation" }, { status: 500 });
   }
 }

@@ -78,7 +78,7 @@ export const PhoneOtpModal: React.FC = () => {
       const success = await verifyOtp(code);
       setIsVerifying(false);
       if (!success) {
-        setError("Invalid verification code. Please check your email or enter 123456.");
+        setError("Invalid or expired verification code. Please check your email.");
       }
     } catch (e: any) {
       setIsVerifying(false);

@@ -306,7 +306,7 @@ export default function AdminDashboardPage() {
                 {data?.recentProducts?.map((p: any) => (
                   <tr key={p.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-900/30">
                     <td className="p-3.5 font-semibold text-black dark:text-white max-w-xs truncate">
-                      <Link href={`/marketplace/${p.id}`} target="_blank" className="hover:underline">
+                      <Link href={`/marketplace/${p.id}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
                         {p.title}
                       </Link>
                     </td>

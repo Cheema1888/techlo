@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma, ensureDbSchema } from "@/lib/prisma";
 import { getServerSession } from "@/lib/session";
 import { isSuperAdminEmail } from "@/lib/admin";
 
@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
         { status: 403 }
       );
     }
+    await ensureDbSchema();
 
     // 1. Fetch aggregate metrics
     const [totalUsers, verifiedStudents, totalProducts, activeQuotes, totalChats, activityLogs, recentUsers, recentProducts, recentQuotes] = await Promise.all([
@@ -76,6 +77,6 @@ export async function GET(req: NextRequest) {
     });
   } catch (error: any) {
     console.error("GET /api/admin/stats error:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Unable to load admin dashboard" }, { status: 500 });
   }
 }

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma, ensureDbSchema } from "@/lib/prisma";
 import { getServerSession } from "@/lib/session";
 import { isSuperAdminEmail } from "@/lib/admin";
+import { deleteR2Object } from "@/lib/r2";
+
+const PRODUCT_STATUSES = new Set(["available", "reserved", "sold"]);
+const QUOTE_STATUSES = new Set(["submitted", "under_review", "quoted", "in_progress", "completed", "cancelled"]);
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,8 +16,10 @@ export async function POST(req: NextRequest) {
         { status: 403 }
       );
     }
+    await ensureDbSchema();
 
-    const { action, targetId, value, adminName = "Platform Admin" } = await req.json();
+    const { action, targetId, value } = await req.json();
+    const adminName = session.email || "Platform Admin";
 
     if (!action || !targetId) {
       return NextResponse.json({ success: false, error: "action and targetId are required" }, { status: 400 });
@@ -23,6 +29,7 @@ export async function POST(req: NextRequest) {
       const user = await prisma.user.update({
         where: { id: targetId },
         data: { isVerifiedStudent: Boolean(value) },
+        select: { id: true, fullName: true, email: true, university: true, isVerifiedStudent: true },
       });
 
       await prisma.activityLog.create({
@@ -39,9 +46,12 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "UPDATE_PRODUCT_STATUS") {
+      if (!PRODUCT_STATUSES.has(value)) {
+        return NextResponse.json({ success: false, error: "Invalid listing status" }, { status: 400 });
+      }
       const product = await prisma.product.update({
         where: { id: targetId },
-        data: { status: value },
+        data: { status: value, soldAt: value === "sold" ? new Date() : null },
       });
 
       await prisma.activityLog.create({
@@ -58,6 +68,17 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "DELETE_PRODUCT") {
+      const images = await prisma.productImage.findMany({
+        where: { productId: targetId },
+        select: { objectKey: true },
+      });
+      const deletionResults = await Promise.all(images.map((image) => deleteR2Object(image.objectKey)));
+      if (deletionResults.some((deleted) => !deleted)) {
+        return NextResponse.json(
+          { success: false, error: "Image cleanup failed; listing was not deleted" },
+          { status: 502 }
+        );
+      }
       const product = await prisma.product.delete({
         where: { id: targetId },
       });
@@ -76,6 +97,9 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "UPDATE_QUOTE_STATUS") {
+      if (!QUOTE_STATUSES.has(value)) {
+        return NextResponse.json({ success: false, error: "Invalid quote status" }, { status: 400 });
+      }
       const quote = await prisma.serviceRequest.update({
         where: { id: targetId },
         data: { status: value },
@@ -97,6 +121,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Unknown action" }, { status: 400 });
   } catch (error: any) {
     console.error("POST /api/admin/moderate error:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Moderation action failed" }, { status: 500 });
   }
 }

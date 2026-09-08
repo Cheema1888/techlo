@@ -5,7 +5,6 @@ import crypto from "crypto";
 
 export async function POST(req: NextRequest) {
   try {
-    await ensureDbSchema();
     const session = getServerSession(req);
     if (!session) {
       return NextResponse.json(
@@ -13,6 +12,7 @@ export async function POST(req: NextRequest) {
         { status: 401 }
       );
     }
+    await ensureDbSchema();
 
     const draftId = `draft_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
     const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(); // 2 hours
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error("POST /api/products/drafts error:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Internal server error" },
+      { success: false, error: "Unable to create listing draft" },
       { status: 500 }
     );
   }

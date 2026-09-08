@@ -7,7 +7,6 @@ const MAX_IMAGE_SIZE_BYTES = 256000;
 
 export async function POST(req: NextRequest) {
   try {
-    await ensureDbSchema();
     const session = getServerSession(req);
     if (!session) {
       return NextResponse.json(
@@ -15,6 +14,7 @@ export async function POST(req: NextRequest) {
         { status: 401 }
       );
     }
+    await ensureDbSchema();
 
     const body = await req.json();
     const { objectKey } = body;
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error("POST /api/uploads/confirm error:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Failed to confirm upload" },
+      { success: false, error: "Failed to confirm upload" },
       { status: 500 }
     );
   }
