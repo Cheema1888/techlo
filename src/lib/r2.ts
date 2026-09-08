@@ -1,20 +1,48 @@
-import { S3Client, PutObjectCommand, HeadObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, HeadObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID || "4af06d676c9f067d4e81091b82fe348f";
-const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID || "8d15aee04693ef07e902f725625be42f";
-const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY || "9863b823226725e87279e615b9af8ea812ddead57e82cc77f895dff5ca9e0160";
-const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || "techlo-images";
-const R2_PUBLIC_URL = (process.env.R2_PUBLIC_URL || "https://pub-72533f33b103419dbe1a3311b5cb6de6.r2.dev").replace(/\/$/, "");
+interface R2Config {
+  bucketName: string;
+  publicUrl: string;
+  accountId: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+}
 
-export const r2Client = new S3Client({
-  region: "auto",
-  endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: R2_ACCESS_KEY_ID,
-    secretAccessKey: R2_SECRET_ACCESS_KEY,
-  },
-});
+let cachedClient: S3Client | null = null;
+
+function requireServerEnv(name: keyof NodeJS.ProcessEnv): string {
+  const value = process.env[name]?.trim();
+  if (!value) {
+    throw new Error(`${name} is required for Cloudflare R2 operations`);
+  }
+  return value;
+}
+
+function getR2Config(): R2Config {
+  return {
+    accountId: requireServerEnv("R2_ACCOUNT_ID"),
+    accessKeyId: requireServerEnv("R2_ACCESS_KEY_ID"),
+    secretAccessKey: requireServerEnv("R2_SECRET_ACCESS_KEY"),
+    bucketName: requireServerEnv("R2_BUCKET_NAME"),
+    publicUrl: requireServerEnv("R2_PUBLIC_URL").replace(/\/$/, ""),
+  };
+}
+
+function getR2Client(): { client: S3Client; config: R2Config } {
+  const config = getR2Config();
+  if (!cachedClient) {
+    cachedClient = new S3Client({
+      region: "auto",
+      endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
+      credentials: {
+        accessKeyId: config.accessKeyId,
+        secretAccessKey: config.secretAccessKey,
+      },
+    });
+  }
+  return { client: cachedClient, config };
+}
 
 export interface PresignedUploadParams {
   objectKey: string;
@@ -35,17 +63,18 @@ export interface PresignedUploadResult {
  */
 export async function createR2PresignedUpload(params: PresignedUploadParams): Promise<PresignedUploadResult> {
   const expiresIn = params.expiresInSeconds || 300; // 5 minutes
+  const { client, config } = getR2Client();
 
   const command = new PutObjectCommand({
-    Bucket: R2_BUCKET_NAME,
+    Bucket: config.bucketName,
     Key: params.objectKey,
     ContentType: params.contentType,
     ContentLength: params.sizeBytes,
     CacheControl: "public, max-age=31536000, immutable",
   });
 
-  const uploadUrl = await getSignedUrl(r2Client, command, { expiresIn });
-  const publicUrl = `${R2_PUBLIC_URL}/${params.objectKey}`;
+  const uploadUrl = await getSignedUrl(client, command, { expiresIn });
+  const publicUrl = `${config.publicUrl}/${params.objectKey}`;
 
   return {
     uploadUrl,
@@ -58,18 +87,41 @@ export async function createR2PresignedUpload(params: PresignedUploadParams): Pr
 /**
  * Confirms that an object exists in R2 and returns its metadata
  */
-export async function verifyR2Object(objectKey: string): Promise<{ exists: boolean; sizeBytes?: number; contentType?: string; etag?: string }> {
+export async function verifyR2Object(objectKey: string): Promise<{
+  exists: boolean;
+  sizeBytes?: number;
+  contentType?: string;
+  etag?: string;
+  isWebP?: boolean;
+}> {
   try {
+    const { client, config } = getR2Client();
     const command = new HeadObjectCommand({
-      Bucket: R2_BUCKET_NAME,
+      Bucket: config.bucketName,
       Key: objectKey,
     });
-    const response = await r2Client.send(command);
+    const response = await client.send(command);
+    const firstBytesResponse = await client.send(
+      new GetObjectCommand({
+        Bucket: config.bucketName,
+        Key: objectKey,
+        Range: "bytes=0-11",
+      })
+    );
+    const firstBytes = await firstBytesResponse.Body?.transformToByteArray();
+    const isWebP = Boolean(
+      firstBytes &&
+        firstBytes.length >= 12 &&
+        Buffer.from(firstBytes.subarray(0, 4)).toString("ascii") === "RIFF" &&
+        Buffer.from(firstBytes.subarray(8, 12)).toString("ascii") === "WEBP"
+    );
+
     return {
       exists: true,
       sizeBytes: response.ContentLength,
       contentType: response.ContentType,
       etag: response.ETag,
+      isWebP,
     };
   } catch (error: any) {
     if (error.name === "NotFound" || error.$metadata?.httpStatusCode === 404) {
@@ -85,11 +137,12 @@ export async function verifyR2Object(objectKey: string): Promise<{ exists: boole
  */
 export async function deleteR2Object(objectKey: string): Promise<boolean> {
   try {
+    const { client, config } = getR2Client();
     const command = new DeleteObjectCommand({
-      Bucket: R2_BUCKET_NAME,
+      Bucket: config.bucketName,
       Key: objectKey,
     });
-    await r2Client.send(command);
+    await client.send(command);
     return true;
   } catch (error) {
     console.error("deleteR2Object error:", error);
@@ -102,13 +155,17 @@ export async function deleteR2Object(objectKey: string): Promise<boolean> {
  */
 export function isApprovedImageUrl(url: string): boolean {
   if (!url || typeof url !== "string") return false;
-  const approvedPrefixes = [
-    R2_PUBLIC_URL,
-    "https://images.techlo.store",
-    "https://pub-72533f33b103419dbe1a3311b5cb6de6.r2.dev",
-    "https://images.unsplash.com",
-  ];
-  return approvedPrefixes.some((prefix) => url.startsWith(prefix));
+  try {
+    const candidate = new URL(url);
+    const allowedOrigins = new Set(["https://images.unsplash.com"]);
+    const configuredPublicUrl = process.env.R2_PUBLIC_URL?.trim();
+    if (configuredPublicUrl) {
+      allowedOrigins.add(new URL(configuredPublicUrl).origin);
+    }
+    return candidate.protocol === "https:" && allowedOrigins.has(candidate.origin);
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -119,13 +176,14 @@ export async function uploadR2Buffer(params: {
   contentType: string;
   buffer: Buffer | Uint8Array;
 }): Promise<string> {
+  const { client, config } = getR2Client();
   const command = new PutObjectCommand({
-    Bucket: R2_BUCKET_NAME,
+    Bucket: config.bucketName,
     Key: params.objectKey,
     ContentType: params.contentType,
     Body: params.buffer,
     CacheControl: "public, max-age=31536000, immutable",
   });
-  await r2Client.send(command);
-  return `${R2_PUBLIC_URL}/${params.objectKey}`;
+  await client.send(command);
+  return `${config.publicUrl}/${params.objectKey}`;
 }

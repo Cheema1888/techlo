@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "@/lib/session";
 
 export async function GET(
   req: NextRequest,
@@ -91,12 +92,56 @@ export async function PATCH(
 ) {
   try {
     const { id } = params;
-    const body = await req.json();
+    const session = getServerSession(req);
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: "Authentication required to update a listing" },
+        { status: 401 }
+      );
+    }
+
+    const product = await prisma.product.findUnique({
+      where: { id },
+      select: { id: true, sellerId: true, title: true, status: true },
+    });
+    if (!product) {
+      return NextResponse.json(
+        { success: false, error: "Product not found" },
+        { status: 404 }
+      );
+    }
+    if (product.sellerId !== session.userId) {
+      return NextResponse.json(
+        { success: false, error: "Only the seller can update this listing" },
+        { status: 403 }
+      );
+    }
+
+    const { status } = await req.json();
+    if (status !== "sold" && status !== "available") {
+      return NextResponse.json(
+        { success: false, error: "Status must be either sold or available" },
+        { status: 400 }
+      );
+    }
 
     const updated = await prisma.product.update({
       where: { id },
-      data: body,
+      data: { status },
     });
+
+    try {
+      await prisma.activityLog.create({
+        data: {
+          actionType: "STATUS_UPDATED",
+          title: status === "sold" ? "Hardware Marked as Sold" : "Hardware Relisted",
+          description: `Seller changed "${product.title}" from ${product.status} to ${status}`,
+          actorName: session.email || "Student Seller",
+          actorRole: session.role || "STUDENT",
+          metadataJson: JSON.stringify({ productId: product.id, previousStatus: product.status, status }),
+        },
+      });
+    } catch {}
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error: any) {

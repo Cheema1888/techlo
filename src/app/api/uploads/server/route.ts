@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "@/lib/session";
 import { prisma, ensureDbSchema } from "@/lib/prisma";
-import { uploadR2Buffer } from "@/lib/r2";
+import { deleteR2Object, uploadR2Buffer } from "@/lib/r2";
 import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
@@ -13,21 +13,19 @@ export async function POST(req: NextRequest) {
   try {
     await ensureDbSchema();
     const session = getServerSession(req);
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: "Authentication required to upload" },
+        { status: 401 }
+      );
+    }
 
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const draftId = (formData.get("draftId") as string) || "";
     const positionStr = (formData.get("position") as string) || "0";
     const position = parseInt(positionStr, 10);
-    const fallbackUserId = (formData.get("userId") as string) || "";
-
-    const userId = session?.userId || fallbackUserId;
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: "Authentication required to upload" },
-        { status: 401 }
-      );
-    }
+    const userId = session.userId;
 
     if (!file) {
       return NextResponse.json(
@@ -67,6 +65,37 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Validate the actual bytes before replacing any previous draft image.
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const hasWebPSignature =
+      buffer.length >= 12 &&
+      buffer.toString("ascii", 0, 4) === "RIFF" &&
+      buffer.toString("ascii", 8, 12) === "WEBP";
+    if (!hasWebPSignature) {
+      return NextResponse.json(
+        { success: false, error: "Uploaded file content is not a valid WebP image" },
+        { status: 400 }
+      );
+    }
+
+    // Replace a pending direct-upload attempt for this slot when the browser
+    // falls back to the server gateway.
+    const existingAtPosition = await prisma.productImage.findFirst({
+      where: { draftId, userId, position, status: { in: ["pending", "uploaded"] } },
+      orderBy: { createdAt: "desc" },
+    });
+    if (existingAtPosition) {
+      const deleted = await deleteR2Object(existingAtPosition.objectKey);
+      if (!deleted) {
+        return NextResponse.json(
+          { success: false, error: "Unable to replace the previous image upload" },
+          { status: 502 }
+        );
+      }
+      await prisma.productImage.delete({ where: { id: existingAtPosition.id } });
+    }
+
     // Verify draft count
     const existingCount = await prisma.productImage.count({
       where: {
@@ -77,20 +106,13 @@ export async function POST(req: NextRequest) {
     });
 
     if (existingCount >= MAX_IMAGES_PER_LISTING) {
-      const existingAtPosition = await prisma.productImage.findFirst({
-        where: { draftId, userId, position },
-      });
-      if (!existingAtPosition) {
-        return NextResponse.json(
-          { success: false, error: `Maximum of ${MAX_IMAGES_PER_LISTING} photos allowed per advertisement` },
-          { status: 400 }
-        );
-      }
+      return NextResponse.json(
+        { success: false, error: `Maximum of ${MAX_IMAGES_PER_LISTING} photos allowed per advertisement` },
+        { status: 400 }
+      );
     }
 
-    // Read bytes & upload to Cloudflare R2
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    // Upload the validated bytes to Cloudflare R2.
     const imageUuid = crypto.randomUUID();
     const objectKey = `products/${userId}/${draftId}/${imageUuid}.webp`;
 

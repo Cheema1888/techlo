@@ -10,16 +10,52 @@ Stack: Next.js 14 (App Router) + Prisma ORM + Tailwind CSS (Monochrome Black & W
 Create your production environment file `.env` or set these in your hosting dashboard (e.g. Vercel / Railway / Render):
 
 ```env
-# Database connection (SQLite by default, or PostgreSQL for cloud databases)
-DATABASE_URL="file:./dev.db"
-
-# For PostgreSQL on Supabase/Railway/Neon:
-# DATABASE_URL="postgresql://user:password@host:5432/techlo?schema=public"
+# PostgreSQL on Supabase/Railway/Neon
+DATABASE_URL="postgresql://user:password@host:5432/techlo?sslmode=require"
 
 # App URL (for dynamic sitemaps and SEO links)
-NEXT_PUBLIC_APP_URL="https://techlo.pk"
+NEXT_PUBLIC_APP_URL="https://www.techlo.store"
+JWT_SECRET="generate-a-long-random-production-secret"
+
+# Cloudflare R2 (server-only)
+R2_ACCOUNT_ID="your-cloudflare-account-id"
+R2_ACCESS_KEY_ID="your-bucket-scoped-access-key-id"
+R2_SECRET_ACCESS_KEY="your-bucket-scoped-secret-access-key"
+R2_BUCKET_NAME="techlo-images"
+R2_PUBLIC_URL="https://images.techlo.store"
+
+# Resend email OTP
+RESEND_API_KEY="re_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+RESEND_FROM_EMAIL="TECHLO <verify@send.techlo.store>"
 NODE_ENV="production"
 ```
+
+All R2 credentials must come from the hosting provider's encrypted environment
+variables. Create an **Object Read & Write** R2 token scoped only to
+`techlo-images`. If a credential has ever been committed to Git, rotate it.
+
+Connect the bucket to `images.techlo.store`, then add this CORS policy in the
+R2 bucket's **Settings > CORS Policy** JSON editor:
+
+```json
+[
+  {
+    "AllowedOrigins": [
+      "https://www.techlo.store",
+      "https://techlo.store"
+    ],
+    "AllowedMethods": ["PUT"],
+    "AllowedHeaders": ["Content-Type"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+The application compresses selected JPG/PNG/WebP files in the browser, strips
+metadata through canvas rendering, and uploads a WebP file of at most 250 KB
+using a five-minute presigned URL. The server verifies ownership, content type,
+and stored size before attaching an image to a listing.
 
 ---
 
@@ -28,8 +64,8 @@ NODE_ENV="production"
 1. Push your repository to **GitHub** / **GitLab**.
 2. Go to [vercel.com](https://vercel.com) -> **Add New Project**.
 3. Import your `techlo` repository.
-4. Add your Environment Variable: `DATABASE_URL` (e.g. using a Supabase PostgreSQL connection string or Serverless Postgres).
-5. Build Command: `npx prisma generate && npm run build`
+4. Add every environment variable listed above.
+5. Build Command: `npm run build`
 6. Click **Deploy**!
 
 ---

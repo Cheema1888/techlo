@@ -302,7 +302,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...productData,
-          sellerId: user?.id,
         }),
       });
 

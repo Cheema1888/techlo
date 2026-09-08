@@ -1,23 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "@/lib/session";
 import { prisma, ensureDbSchema } from "@/lib/prisma";
-import { verifyR2Object } from "@/lib/r2";
+import { deleteR2Object, verifyR2Object } from "@/lib/r2";
+
+const MAX_IMAGE_SIZE_BYTES = 256000;
 
 export async function POST(req: NextRequest) {
   try {
     await ensureDbSchema();
     const session = getServerSession(req);
-
-    const body = await req.json();
-    const { objectKey, userId: fallbackUserId } = body;
-
-    const userId = session?.userId || fallbackUserId;
-    if (!userId) {
+    if (!session) {
       return NextResponse.json(
         { success: false, error: "Authentication required to confirm upload" },
         { status: 401 }
       );
     }
+
+    const body = await req.json();
+    const { objectKey } = body;
+    const userId = session.userId;
 
     if (!objectKey) {
       return NextResponse.json(
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
       where: { objectKey },
     });
 
-    if (!imageRecord || (imageRecord.userId !== userId && !objectKey.includes(userId))) {
+    if (!imageRecord || imageRecord.userId !== userId) {
       return NextResponse.json(
         { success: false, error: "Image upload record not found or ownership mismatch" },
         { status: 404 }
@@ -43,6 +44,23 @@ export async function POST(req: NextRequest) {
     if (!r2Check.exists) {
       return NextResponse.json(
         { success: false, error: "Object was not found in Cloudflare R2 storage. Upload may have failed." },
+        { status: 400 }
+      );
+    }
+
+    if (
+      r2Check.contentType !== "image/webp" ||
+      !r2Check.isWebP ||
+      !r2Check.sizeBytes ||
+      r2Check.sizeBytes > MAX_IMAGE_SIZE_BYTES
+    ) {
+      const deleted = await deleteR2Object(objectKey);
+      await prisma.productImage.update({
+        where: { objectKey },
+        data: { status: deleted ? "deleted" : "uploaded" },
+      });
+      return NextResponse.json(
+        { success: false, error: "Uploaded object failed WebP type or 250 KB size validation" },
         { status: 400 }
       );
     }

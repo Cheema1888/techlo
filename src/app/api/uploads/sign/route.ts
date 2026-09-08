@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "@/lib/session";
 import { prisma, ensureDbSchema } from "@/lib/prisma";
-import { createR2PresignedUpload } from "@/lib/r2";
+import { createR2PresignedUpload, deleteR2Object } from "@/lib/r2";
 import crypto from "crypto";
 
 const MAX_IMAGE_SIZE_BYTES = 256000; // 250 KB exact
@@ -11,17 +11,16 @@ export async function POST(req: NextRequest) {
   try {
     await ensureDbSchema();
     const session = getServerSession(req);
-
-    const body = await req.json();
-    const { draftId, contentType, size, position, userId: fallbackUserId } = body;
-
-    const userId = session?.userId || fallbackUserId;
-    if (!userId) {
+    if (!session) {
       return NextResponse.json(
         { success: false, error: "Authentication required to request an upload URL" },
         { status: 401 }
       );
     }
+
+    const body = await req.json();
+    const { draftId, contentType, size, position } = body;
+    const userId = session.userId;
 
     if (!draftId) {
       return NextResponse.json(
@@ -54,6 +53,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Replace a previous attempt for this slot so retries cannot create
+    // duplicate active records.
+    const existingAtPosition = await prisma.productImage.findFirst({
+      where: { draftId, userId, position, status: { in: ["pending", "uploaded"] } },
+      orderBy: { createdAt: "desc" },
+    });
+    if (existingAtPosition) {
+      const deleted = await deleteR2Object(existingAtPosition.objectKey);
+      if (!deleted) {
+        return NextResponse.json(
+          { success: false, error: "Unable to replace the previous image upload" },
+          { status: 502 }
+        );
+      }
+      await prisma.productImage.delete({ where: { id: existingAtPosition.id } });
+    }
+
     // Check count of active images for this draft
     const existingCount = await prisma.productImage.count({
       where: {
@@ -64,16 +80,10 @@ export async function POST(req: NextRequest) {
     });
 
     if (existingCount >= MAX_IMAGES_PER_LISTING) {
-      // Check if updating an existing position or if truly exceeded
-      const existingAtPosition = await prisma.productImage.findFirst({
-        where: { draftId, userId, position },
-      });
-      if (!existingAtPosition) {
-        return NextResponse.json(
-          { success: false, error: `Maximum of ${MAX_IMAGES_PER_LISTING} photos allowed per advertisement` },
-          { status: 400 }
-        );
-      }
+      return NextResponse.json(
+        { success: false, error: `Maximum of ${MAX_IMAGES_PER_LISTING} photos allowed per advertisement` },
+        { status: 400 }
+      );
     }
 
     // Generate unique object key: products/{userId}/{draftId}/{uuid}.webp

@@ -122,6 +122,14 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     await ensureDbSchema();
+    const session = getServerSession(req);
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: "Authentication required to publish a listing" },
+        { status: 401 }
+      );
+    }
+
     const body = await req.json();
     const {
       title,
@@ -137,7 +145,6 @@ export async function POST(req: NextRequest) {
       quantityAvailable,
       location,
       city,
-      sellerId,
       draftId,
     } = body;
 
@@ -147,8 +154,6 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-
-    const session = getServerSession(req);
 
     // 1. Strictly enforce max 4 images per listing
     const imageList: string[] = Array.isArray(images) ? images : [];
@@ -181,14 +186,26 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Default to session user or provided sellerId or first user
-    let finalSellerId = session?.userId || sellerId;
-    if (!finalSellerId) {
-      const defaultUser = await prisma.user.findFirst();
-      if (!defaultUser) {
-        return NextResponse.json({ success: false, error: "No user found in database" }, { status: 400 });
+    const uploadedImages = draftId
+      ? await prisma.productImage.findMany({
+          where: {
+            draftId,
+            userId: session.userId,
+            status: "uploaded",
+          },
+          select: { url: true },
+        })
+      : [];
+    const uploadedUrls = new Set(uploadedImages.map((image) => image.url));
+
+    for (const imgUrl of imageList) {
+      const isStockImage = imgUrl.startsWith("https://images.unsplash.com/");
+      if (!isStockImage && !uploadedUrls.has(imgUrl)) {
+        return NextResponse.json(
+          { success: false, error: "Listing image is not a confirmed upload owned by this seller" },
+          { status: 400 }
+        );
       }
-      finalSellerId = defaultUser.id;
     }
 
     const finalImages =
@@ -211,7 +228,7 @@ export async function POST(req: NextRequest) {
         quantityAvailable: quantityAvailable ? parseInt(quantityAvailable) : 1,
         location: location || "Campus Pickup",
         city: city || "Islamabad",
-        sellerId: finalSellerId,
+        sellerId: session.userId,
       },
       include: {
         seller: true,
@@ -224,7 +241,8 @@ export async function POST(req: NextRequest) {
         await prisma.productImage.updateMany({
           where: {
             draftId,
-            status: { in: ["pending", "uploaded"] },
+            userId: session.userId,
+            status: "uploaded",
           },
           data: {
             status: "attached",

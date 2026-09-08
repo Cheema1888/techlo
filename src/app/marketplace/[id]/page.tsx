@@ -14,6 +14,8 @@ import {
   ArrowLeft,
   CheckCircle2,
   Check,
+  PackageCheck,
+  RefreshCw,
 } from "lucide-react";
 import { ProductCard } from "@/components/marketplace/ProductCard";
 import { ChotuAvatar } from "@/components/common/ChotuAvatar";
@@ -21,7 +23,7 @@ import { ChotuAvatar } from "@/components/common/ChotuAvatar";
 export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { products, savedProductIds, toggleSaveProduct } = useAuth();
+  const { user, products, savedProductIds, toggleSaveProduct, refreshData } = useAuth();
   const productId = params?.id as string;
 
   const [productData, setProductData] = useState<any>(null);
@@ -29,6 +31,8 @@ export default function ProductDetailPage() {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [offerPrice, setOfferPrice] = useState("");
   const [isCopied, setIsCopied] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [statusError, setStatusError] = useState("");
 
   useEffect(() => {
     // 1. Check local state first
@@ -77,6 +81,8 @@ export default function ProductDetailPage() {
   }
 
   const isSaved = savedProductIds.includes(productData.id);
+  const isSold = productData.status === "sold";
+  const isOwner = Boolean(user?.id && user.id === productData.seller?.id);
   const conditionInfo = getConditionBadge(productData.condition);
 
   const rawPhone = productData.seller?.phone || productData.seller?.phoneNumber || "923000000000";
@@ -102,6 +108,28 @@ export default function ProductDetailPage() {
       navigator.clipboard.writeText(window.location.href);
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
+    }
+  };
+
+  const handleListingStatus = async (status: "sold" | "available") => {
+    setIsUpdatingStatus(true);
+    setStatusError("");
+    try {
+      const response = await fetch(`/api/products/${productData.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Unable to update listing status");
+      }
+      setProductData((current: any) => ({ ...current, status }));
+      await refreshData();
+    } catch (error: any) {
+      setStatusError(error.message || "Unable to update listing status");
+    } finally {
+      setIsUpdatingStatus(false);
     }
   };
 
@@ -154,6 +182,13 @@ export default function ProductDetailPage() {
                 {conditionInfo.label}
               </span>
             </div>
+            {isSold && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/55 backdrop-blur-[1px]">
+                <span className="rounded-full border border-white/30 bg-black/80 px-5 py-2 text-sm font-bold uppercase tracking-[0.22em] text-white">
+                  Sold
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Thumbnail Strip */}
@@ -239,7 +274,12 @@ export default function ProductDetailPage() {
 
             {/* Action Buttons (WhatsApp & Web Chat) */}
             <div className="pt-2 space-y-2">
-              {productData.showPhoneNumber && productData.seller?.phone ? (
+              {isSold ? (
+                <div className="flex items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-neutral-100 p-3 text-xs font-semibold text-neutral-600 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
+                  <PackageCheck className="h-4 w-4" />
+                  This item has been sold
+                </div>
+              ) : productData.showPhoneNumber && productData.seller?.phone ? (
                 <a
                   href={whatsappUrl}
                   target="_blank"
@@ -255,13 +295,30 @@ export default function ProductDetailPage() {
                 </div>
               )}
 
-              <Link
-                href={`/chat?productId=${productData.id}&sellerId=${productData.seller?.id}`}
-                className="w-full py-3 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-900 dark:text-neutral-100 font-semibold text-xs rounded-full shadow-xs flex items-center justify-center gap-2 transition-all text-center"
-              >
-                <MessageCircle className="w-3.5 h-3.5" />
-                <span>Chat on TECHLO Webapp</span>
-              </Link>
+              {!isSold && (
+                <Link
+                  href={`/chat?productId=${productData.id}&sellerId=${productData.seller?.id}`}
+                  className="w-full py-3 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-900 dark:text-neutral-100 font-semibold text-xs rounded-full shadow-xs flex items-center justify-center gap-2 transition-all text-center"
+                >
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  <span>Chat on TECHLO Webapp</span>
+                </Link>
+              )}
+
+              {isOwner && (
+                <div className="space-y-2 border-t border-neutral-100 pt-3 dark:border-neutral-800">
+                  <button
+                    type="button"
+                    disabled={isUpdatingStatus}
+                    onClick={() => handleListingStatus(isSold ? "available" : "sold")}
+                    className="flex w-full items-center justify-center gap-2 rounded-full border border-neutral-300 px-4 py-3 text-xs font-semibold text-neutral-800 transition-colors hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                  >
+                    {isSold ? <RefreshCw className="h-3.5 w-3.5" /> : <PackageCheck className="h-3.5 w-3.5" />}
+                    {isUpdatingStatus ? "Updating..." : isSold ? "Mark as available again" : "Mark as sold"}
+                  </button>
+                  {statusError && <p className="text-center text-[11px] text-red-600 dark:text-red-400">{statusError}</p>}
+                </div>
+              )}
             </div>
           </div>
 

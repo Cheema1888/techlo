@@ -199,7 +199,6 @@ export default function SellHardwarePage() {
     form.append("file", slot.blob, `image_${position}.webp`);
     form.append("draftId", draftId);
     form.append("position", String(position));
-    if (user?.id) form.append("userId", user.id);
 
     setImageSlots((prev) =>
       prev.map((s) => (s.id === slot.id ? { ...s, uploadProgress: 50, status: "uploading" } : s))
@@ -250,7 +249,6 @@ export default function SellHardwarePage() {
             contentType: "image/webp",
             size: slot.sizeBytes,
             position,
-            userId: user?.id,
           }),
         });
 
@@ -284,10 +282,7 @@ export default function SellHardwarePage() {
               const confirmRes = await fetch("/api/uploads/confirm", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  objectKey,
-                  userId: user?.id,
-                }),
+                body: JSON.stringify({ objectKey }),
               });
               const confirmData = await confirmRes.json();
               if (!confirmRes.ok || !confirmData.success) {
@@ -376,10 +371,13 @@ export default function SellHardwarePage() {
       const draftRes = await fetch("/api/products/drafts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id }),
+        body: JSON.stringify({}),
       });
       const draftData = await draftRes.json();
-      const draftId = draftData.data?.draftId || `draft_${Date.now()}`;
+      if (!draftRes.ok || !draftData.success || !draftData.data?.draftId) {
+        throw new Error(draftData.error || "Unable to create an authenticated listing draft");
+      }
+      const draftId = draftData.data.draftId;
 
       // 2. Upload images directly to Cloudflare R2
       const finalImageUrls: string[] = [];

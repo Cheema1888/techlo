@@ -7,17 +7,7 @@ export async function POST(req: NextRequest) {
   try {
     await ensureDbSchema();
     const session = getServerSession(req);
-
-    // If cookie not found, allow client to pass token in body or headers
-    let userId = session?.userId;
-    if (!userId) {
-      try {
-        const body = await req.json();
-        userId = body?.userId;
-      } catch {}
-    }
-
-    if (!userId) {
+    if (!session) {
       return NextResponse.json(
         { success: false, error: "Authentication required to create a listing draft" },
         { status: 401 }
