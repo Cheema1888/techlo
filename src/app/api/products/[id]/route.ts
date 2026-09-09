@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma, ensureDbSchema } from "@/lib/prisma";
 import { getServerSession } from "@/lib/session";
 import { normalizeWhatsappNumber } from "@/lib/whatsapp";
 
@@ -8,6 +8,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    await ensureDbSchema();
     const { id } = params;
 
     const product = await prisma.product.findUnique({
@@ -96,6 +97,7 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
+    await ensureDbSchema();
     const { id } = params;
     const session = getServerSession(req);
     if (!session) {
@@ -107,7 +109,7 @@ export async function PATCH(
 
     const product = await prisma.product.findUnique({
       where: { id },
-      select: { id: true, sellerId: true, title: true, status: true },
+      select: { id: true, sellerId: true, title: true, status: true, soldAt: true },
     });
     if (!product) {
       return NextResponse.json(
@@ -132,7 +134,15 @@ export async function PATCH(
 
     const updated = await prisma.product.update({
       where: { id },
-      data: { status },
+      data: {
+        status,
+        soldAt:
+          status === "sold"
+            ? product.status === "sold"
+              ? product.soldAt || new Date()
+              : new Date()
+            : null,
+      },
     });
 
     try {

@@ -29,5 +29,16 @@ export async function ensureDbSchema(): Promise<void> {
       `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "avatarColor" TEXT DEFAULT 'cyan';`
     );
   } catch {}
+  try {
+    await prisma.$executeRawUnsafe(
+      `ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "soldAt" TIMESTAMP(3);`
+    );
+    await prisma.$executeRawUnsafe(
+      `UPDATE "Product" SET "soldAt" = "updatedAt" WHERE "status" = 'sold' AND "soldAt" IS NULL;`
+    );
+    await prisma.$executeRawUnsafe(
+      `CREATE INDEX IF NOT EXISTS "Product_status_soldAt_idx" ON "Product"("status", "soldAt");`
+    );
+  } catch {}
   globalForPrisma.schemaEnsured = true;
 }
