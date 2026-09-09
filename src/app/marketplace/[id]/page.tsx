@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/authContext";
 import { formatPKR, getConditionBadge, getCategoryLabel } from "@/lib/utils";
+import { normalizeWhatsappNumber } from "@/lib/whatsapp";
 import {
   Heart,
   Share2,
@@ -85,13 +86,13 @@ export default function ProductDetailPage() {
   const isOwner = Boolean(user?.id && user.id === productData.seller?.id);
   const conditionInfo = getConditionBadge(productData.condition);
 
-  const rawPhone = productData.seller?.phone || productData.seller?.phoneNumber || "923000000000";
+  const rawPhone = productData.seller?.phone || productData.seller?.phoneNumber;
   const sellerName = productData.seller?.name || productData.seller?.fullName || "Seller";
-  const cleanPhone = rawPhone.replace(/[^0-9]/g, "");
+  const whatsappNumber = normalizeWhatsappNumber(rawPhone);
   const whatsappMessage = encodeURIComponent(
     `Assalam-o-Alaikum ${sellerName}! I saw your listing for "${productData.title}" on TECHLO (${formatPKR(productData.pricePkr)}). Is it still available for campus pickup?`
   );
-  const whatsappUrl = `https://wa.me/${cleanPhone}?text=${whatsappMessage}`;
+  const whatsappUrl = `https://wa.me/${whatsappNumber || ""}?text=${whatsappMessage}`;
 
   const relatedProducts = products
     .filter((p) => p.id !== productData.id && (p.category === productData.category || p.seller?.university === productData.seller?.university))
@@ -279,7 +280,7 @@ export default function ProductDetailPage() {
                   <PackageCheck className="h-4 w-4" />
                   This item has been sold
                 </div>
-              ) : productData.showPhoneNumber && productData.seller?.phone ? (
+              ) : productData.showPhoneNumber && whatsappNumber ? (
                 <a
                   href={whatsappUrl}
                   target="_blank"

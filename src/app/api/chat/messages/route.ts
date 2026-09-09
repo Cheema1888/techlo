@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
 // GET: Fetch messages for a conversation (last 14 days)
 export async function GET(req: NextRequest) {
   try {
+    const session = getServerSession(req);
+    if (!session) {
+      return NextResponse.json({ success: false, error: "Authentication required" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
     const conversationId = searchParams.get("conversationId");
 
@@ -14,6 +20,27 @@ export async function GET(req: NextRequest) {
     }
 
     const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+
+    const conversation = await prisma.conversation.findFirst({
+      where: {
+        id: conversationId,
+        OR: [{ buyerId: session.userId }, { sellerId: session.userId }],
+      },
+      select: { id: true },
+    });
+
+    if (!conversation) {
+      return NextResponse.json({ success: false, error: "Conversation not found" }, { status: 404 });
+    }
+
+    await prisma.chatMessage.updateMany({
+      where: {
+        conversationId,
+        senderId: { not: session.userId },
+        isRead: false,
+      },
+      data: { isRead: true },
+    });
 
     const messages = await prisma.chatMessage.findMany({
       where: {
@@ -38,19 +65,36 @@ export async function GET(req: NextRequest) {
 // POST: Send a message in a conversation
 export async function POST(req: NextRequest) {
   try {
-    const { conversationId, senderId, content } = await req.json();
+    const session = getServerSession(req);
+    if (!session) {
+      return NextResponse.json({ success: false, error: "Authentication required" }, { status: 401 });
+    }
 
-    if (!conversationId || !senderId || !content?.trim()) {
+    const { conversationId, content } = await req.json();
+
+    if (!conversationId || !content?.trim()) {
       return NextResponse.json(
-        { success: false, error: "conversationId, senderId, and content are required" },
+        { success: false, error: "conversationId and content are required" },
         { status: 400 }
       );
+    }
+
+    const conversation = await prisma.conversation.findFirst({
+      where: {
+        id: conversationId,
+        OR: [{ buyerId: session.userId }, { sellerId: session.userId }],
+      },
+      select: { id: true },
+    });
+
+    if (!conversation) {
+      return NextResponse.json({ success: false, error: "Conversation not found" }, { status: 404 });
     }
 
     const message = await prisma.chatMessage.create({
       data: {
         conversationId,
-        senderId,
+        senderId: session.userId,
         content: content.trim(),
       },
       include: {

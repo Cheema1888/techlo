@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { TechloLogo } from "../branding/TechloLogo";
@@ -31,8 +31,39 @@ export const Navbar: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
 
   const isAdmin = Boolean(user && isSuperAdminEmail(user.email));
+
+  const refreshUnreadChats = useCallback(async () => {
+    if (!isAuthenticated) {
+      setUnreadChatCount(0);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/chat/unread", { cache: "no-store" });
+      const payload = await response.json();
+      if (response.ok && payload.success) {
+        setUnreadChatCount(Number(payload.count) || 0);
+      }
+    } catch {
+      // A temporary polling failure should not disrupt navigation.
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    refreshUnreadChats();
+    const interval = window.setInterval(refreshUnreadChats, 12000);
+    window.addEventListener("focus", refreshUnreadChats);
+    window.addEventListener("techlo:unread-chats-changed", refreshUnreadChats);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refreshUnreadChats);
+      window.removeEventListener("techlo:unread-chats-changed", refreshUnreadChats);
+    };
+  }, [refreshUnreadChats]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,13 +97,18 @@ export const Navbar: React.FC = () => {
                 <Link
                   key={link.name}
                   href={link.href}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
+                  className={`relative px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
                     isActive
                       ? "bg-white dark:bg-neutral-800 text-black dark:text-white shadow-xs font-semibold"
                       : "text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white"
                   }`}
                 >
                   {link.name}
+                  {link.href === "/chat" && unreadChatCount > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white ring-2 ring-white dark:ring-[#09090b]">
+                      {unreadChatCount > 99 ? "99+" : unreadChatCount}
+                    </span>
+                  )}
                 </Link>
               );
             })}
@@ -101,10 +137,13 @@ export const Navbar: React.FC = () => {
             {isAuthenticated && (
               <Link
                 href="/chat"
-                className="p-2 rounded-full bg-neutral-100/70 dark:bg-neutral-900/60 border border-neutral-200/60 dark:border-neutral-800/60 text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white transition-all"
+                className="relative p-2 rounded-full bg-neutral-100/70 dark:bg-neutral-900/60 border border-neutral-200/60 dark:border-neutral-800/60 text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white transition-all"
                 title="Open Web Chat"
               >
                 <MessageCircle className="w-3.5 h-3.5" />
+                {unreadChatCount > 0 && (
+                  <span className="absolute right-0 top-0 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white dark:ring-[#09090b]" />
+                )}
               </Link>
             )}
 
@@ -174,6 +213,11 @@ export const Navbar: React.FC = () => {
                     >
                       <MessageCircle className="w-3.5 h-3.5 text-neutral-400" />
                       <span>Web Chat</span>
+                      {unreadChatCount > 0 && (
+                        <span className="ml-auto rounded-full bg-rose-500 px-1.5 py-0.5 text-[9px] font-bold text-white">
+                          {unreadChatCount > 99 ? "99+" : unreadChatCount}
+                        </span>
+                      )}
                     </Link>
 
                     <Link
@@ -235,9 +279,14 @@ export const Navbar: React.FC = () => {
                   key={link.name}
                   href={link.href}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="px-3 py-2 text-xs font-medium text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl"
+                  className="relative px-3 py-2 text-xs font-medium text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl"
                 >
                   {link.name}
+                  {link.href === "/chat" && unreadChatCount > 0 && (
+                    <span className="ml-2 inline-flex min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 py-0.5 text-[9px] font-bold text-white">
+                      {unreadChatCount > 99 ? "99+" : unreadChatCount}
+                    </span>
+                  )}
                 </Link>
               ))}
               {isAdmin && (

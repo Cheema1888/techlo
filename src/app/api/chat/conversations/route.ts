@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "@/lib/session";
 
 // GET: Fetch conversations for a specific user
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get("userId");
-
-    if (!userId) {
-      return NextResponse.json({ success: false, error: "userId required" }, { status: 400 });
+    const session = getServerSession(req);
+    if (!session) {
+      return NextResponse.json({ success: false, error: "Authentication required" }, { status: 401 });
     }
+    const userId = session.userId;
 
     const conversations = await prisma.conversation.findMany({
       where: {
@@ -27,11 +27,23 @@ export async function GET(req: NextRequest) {
           orderBy: { createdAt: "desc" },
           take: 1,
         },
+        _count: {
+          select: {
+            messages: {
+              where: { isRead: false, senderId: { not: userId } },
+            },
+          },
+        },
       },
       orderBy: { updatedAt: "desc" },
     });
 
-    return NextResponse.json({ success: true, data: conversations });
+    const data = conversations.map(({ _count, ...conversation }) => ({
+      ...conversation,
+      unreadCount: _count.messages,
+    }));
+
+    return NextResponse.json({ success: true, data });
   } catch (error: any) {
     console.error("GET /api/chat/conversations error:", error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -41,7 +53,13 @@ export async function GET(req: NextRequest) {
 // POST: Create or retrieve existing conversation
 export async function POST(req: NextRequest) {
   try {
-    const { buyerId, sellerId, productId } = await req.json();
+    const session = getServerSession(req);
+    if (!session) {
+      return NextResponse.json({ success: false, error: "Authentication required" }, { status: 401 });
+    }
+
+    const { sellerId, productId } = await req.json();
+    const buyerId = session.userId;
 
     if (!buyerId || !sellerId) {
       return NextResponse.json({ success: false, error: "buyerId and sellerId are required" }, { status: 400 });

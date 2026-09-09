@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { ProductListing } from "@/lib/types";
 import { formatPKR, getConditionBadge, getCategoryLabel } from "@/lib/utils";
+import { normalizeWhatsappNumber } from "@/lib/whatsapp";
 import { useAuth } from "@/lib/authContext";
 import { ChotuAvatar } from "../common/ChotuAvatar";
 import {
@@ -63,13 +64,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   const rawPhone = product.seller?.phone || product.seller?.phoneNumber;
   const sellerName = product.seller?.name || product.seller?.fullName || "Seller";
-  const hasVisiblePhone = Boolean(product.showPhoneNumber && rawPhone);
+  const whatsappNumber = normalizeWhatsappNumber(rawPhone);
+  const hasVisiblePhone = Boolean(product.showPhoneNumber && whatsappNumber);
 
-  const cleanPhone = (rawPhone || "923000000000").replace(/[^0-9]/g, "");
   const whatsappMessage = encodeURIComponent(
     `Assalam-o-Alaikum ${sellerName}! I saw your listing for "${product.title}" on TECHLO (${formatPKR(product.pricePkr)}). Is it still available for campus pickup?`
   );
-  const whatsappUrl = `https://wa.me/${cleanPhone}?text=${whatsappMessage}`;
+  const whatsappUrl = `https://wa.me/${whatsappNumber || ""}?text=${whatsappMessage}`;
   const webChatUrl = `/chat?productId=${product.id}&sellerId=${product.seller?.id}`;
 
   return (

@@ -80,7 +80,7 @@ function ChatContent() {
   const loadConversations = async () => {
     if (!user?.id) return;
     try {
-      const res = await fetch(`/api/chat/conversations?userId=${user.id}`);
+      const res = await fetch("/api/chat/conversations", { cache: "no-store" });
       const json = await res.json();
       if (json.success && json.data) {
         setConversations(json.data);
@@ -110,7 +110,6 @@ function ChatContent() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              buyerId: user.id,
               sellerId: targetSellerId,
               productId: targetProductId || undefined,
             }),
@@ -141,6 +140,8 @@ function ChatContent() {
       const json = await res.json();
       if (json.success && json.data) {
         setMessages(json.data);
+        window.dispatchEvent(new Event("techlo:unread-chats-changed"));
+        await loadConversations();
       }
     } catch (e) {
       console.error(e);
@@ -248,7 +249,6 @@ function ChatContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           conversationId: activeConversation.id,
-          senderId: user.id,
           content: textToSend,
         }),
       });
@@ -352,6 +352,7 @@ function ChatContent() {
                 const isSelected = activeConversation?.id === convo.id;
                 const partner = convo.buyerId === user.id ? convo.seller : convo.buyer;
                 const lastMsg = convo.messages?.[0];
+                const unreadCount = Number(convo.unreadCount) || 0;
 
                 return (
                   <button
@@ -378,6 +379,11 @@ function ChatContent() {
                         {convo.updatedAt && (
                           <span className="text-[10px] text-neutral-400 flex-shrink-0">
                             {new Date(convo.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        )}
+                        {unreadCount > 0 && (
+                          <span className="ml-1 flex h-4 min-w-4 flex-shrink-0 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white">
+                            {unreadCount > 99 ? "99+" : unreadCount}
                           </span>
                         )}
                       </div>

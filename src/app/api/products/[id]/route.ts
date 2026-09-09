@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/session";
+import { normalizeWhatsappNumber } from "@/lib/whatsapp";
 
 export async function GET(
   req: NextRequest,
@@ -44,6 +45,10 @@ export async function GET(
       data: { viewsCount: { increment: 1 } },
     });
 
+    const publicPhone = product.showPhoneNumber
+      ? normalizeWhatsappNumber(product.seller.phoneNumber)
+      : undefined;
+
     const formatted = {
       id: product.id,
       title: product.title,
@@ -66,8 +71,8 @@ export async function GET(
         id: product.seller.id,
         name: product.seller.fullName,
         email: product.seller.email,
-        phone: product.showPhoneNumber ? product.seller.phoneNumber : undefined,
-        phoneNumber: product.showPhoneNumber ? product.seller.phoneNumber : undefined,
+        phone: publicPhone || undefined,
+        phoneNumber: publicPhone || undefined,
         university: product.seller.university,
         campus: product.seller.campus || "",
         isVerifiedStudent: product.seller.isVerifiedStudent,

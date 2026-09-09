@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma, ensureDbSchema } from "@/lib/prisma";
 import { isApprovedImageUrl } from "@/lib/r2";
 import { getServerSession } from "@/lib/session";
+import { normalizeWhatsappNumber } from "@/lib/whatsapp";
 
 export async function GET(req: NextRequest) {
   try {
@@ -80,7 +81,12 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    const formattedProducts = products.map((p) => ({
+    const formattedProducts = products.map((p) => {
+      const publicPhone = p.showPhoneNumber
+        ? normalizeWhatsappNumber(p.seller.phoneNumber)
+        : undefined;
+
+      return {
       id: p.id,
       title: p.title,
       category: p.category,
@@ -100,8 +106,8 @@ export async function GET(req: NextRequest) {
         id: p.seller.id,
         name: p.seller.fullName,
         email: p.seller.email,
-        phone: p.showPhoneNumber ? p.seller.phoneNumber : undefined,
-        phoneNumber: p.showPhoneNumber ? p.seller.phoneNumber : undefined,
+        phone: publicPhone || undefined,
+        phoneNumber: publicPhone || undefined,
         university: p.seller.university,
         campus: p.seller.campus || "",
         isVerifiedStudent: p.seller.isVerifiedStudent,
@@ -110,7 +116,8 @@ export async function GET(req: NextRequest) {
         avatarUrl: p.seller.avatarUrl || "",
         avatarColor: p.seller.avatarColor || "cyan",
       },
-    }));
+      };
+    });
 
     return NextResponse.json({ success: true, count: formattedProducts.length, data: formattedProducts });
   } catch (error: any) {
