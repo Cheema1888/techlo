@@ -69,12 +69,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (sessionRes.ok && sessionJson.success && sessionJson.data?.user) {
             setUser(sessionJson.data.user);
             localStorage.setItem("techlo_user_session", JSON.stringify(sessionJson.data.user));
+            await refreshData(true);
           } else {
             setUser(null);
             localStorage.removeItem("techlo_user_session");
+            await refreshData(false);
           }
-        } finally {
-          await refreshData();
+        } catch (error) {
+          console.warn("Unable to restore session:", error);
+          await refreshData(false);
         }
       })();
     } catch (e) {
@@ -82,11 +85,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const refreshData = async () => {
+  const refreshData = async (authenticated = Boolean(user)) => {
     try {
       const [prodRes, srvRes] = await Promise.all([
         fetch("/api/products"),
-        fetch("/api/services"),
+        authenticated ? fetch("/api/services") : Promise.resolve(null),
       ]);
 
       if (prodRes.ok) {
@@ -96,12 +99,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
-      if (srvRes.ok) {
+      if (srvRes?.ok) {
         const srvJson = await srvRes.json();
         if (srvJson.success && Array.isArray(srvJson.data)) {
           setServiceRequests(srvJson.data);
         }
-      }
+      } else if (!authenticated) setServiceRequests([]);
     } catch (err) {
       console.error("Failed to fetch live database records:", err);
     }

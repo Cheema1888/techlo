@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const session = getServerSession(req);
   if (!session) {
-    return NextResponse.json({ success: false, error: "Not authenticated" }, { status: 401 });
+    return NextResponse.json({ success: true, authenticated: false, data: { user: null } });
   }
   await ensureDbSchema();
 
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
   });
 
   if (!user) {
-    return NextResponse.json({ success: false, error: "Not authenticated" }, { status: 401 });
+    return NextResponse.json({ success: true, authenticated: false, data: { user: null } });
   }
-  return NextResponse.json({ success: true, data: { user } });
+  return NextResponse.json({ success: true, authenticated: true, data: { user } });
 }

@@ -39,12 +39,6 @@ export async function GET(
       );
     }
 
-    // Increment views count
-    await prisma.product.update({
-      where: { id },
-      data: { viewsCount: { increment: 1 } },
-    });
-
     const publicPhone = product.showPhoneNumber
       ? normalizeWhatsappNumber(product.seller.phoneNumber)
       : undefined;
@@ -65,7 +59,7 @@ export async function GET(
       status: product.status,
       location: product.location,
       city: product.city,
-      viewsCount: product.viewsCount + 1,
+      viewsCount: product.viewsCount,
       createdAt: product.createdAt.toISOString(),
       seller: {
         id: product.seller.id,
