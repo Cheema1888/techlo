@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/authContext";
 import { ProductCard } from "@/components/marketplace/ProductCard";
 import { QuoteEstimator } from "@/components/services/QuoteEstimator";
+import { TechloAnimatedLogo } from "@/components/branding/TechloAnimatedLogo";
 import { PAKISTANI_UNIVERSITIES } from "@/lib/mockData";
 import {
   Cpu,
@@ -42,20 +43,20 @@ export default function HomePage() {
   return (
     <div className="space-y-16 sm:space-y-24 pb-20">
       {/* 1. HERO SECTION (PI.DEV SERENE MINIMALISM) */}
-      <section className="relative overflow-hidden pt-12 pb-16 sm:pt-20 sm:pb-24 border-b border-neutral-200/70 dark:border-neutral-800/70 transition-colors">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center space-y-6">
-          {/* User Status / Platform Pill */}
-          {isAuthenticated && user ? (
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-neutral-200/80 dark:border-neutral-800/80 bg-neutral-50 dark:bg-neutral-900/60 text-xs text-neutral-800 dark:text-neutral-200 shadow-xs">
+      <section className="relative overflow-hidden pt-8 pb-12 sm:pt-12 sm:pb-20 border-b border-neutral-200/70 dark:border-neutral-800/70 transition-colors">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center space-y-5 sm:space-y-6">
+          {/* User Status (if signed in) */}
+          {isAuthenticated && user && (
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-neutral-200/80 dark:border-neutral-800/80 bg-neutral-50 dark:bg-neutral-900/60 text-xs text-neutral-800 dark:text-neutral-200 shadow-xs mb-1">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span>Signed in as <strong>{user.fullName}</strong> ({user.university})</span>
             </div>
-          ) : (
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-neutral-200/80 dark:border-neutral-800/80 bg-neutral-50 dark:bg-neutral-900/60 text-xs text-neutral-600 dark:text-neutral-400 shadow-xs">
-              <span className="w-1.5 h-1.5 rounded-full bg-black dark:bg-white" />
-              <span>Pakistan Student Hardware Exchange & Prototyping</span>
-            </div>
           )}
+
+          {/* Pixar-Style Animated Techlo Logo Centerpiece */}
+          <div className="py-1 sm:py-2 flex justify-center items-center overflow-visible">
+            <TechloAnimatedLogo size="hero" showTagline={false} />
+          </div>
 
           {/* Main Headline */}
           <h1 className="text-4xl sm:text-6xl lg:text-7xl font-semibold tracking-tight text-neutral-950 dark:text-white leading-[1.08]">

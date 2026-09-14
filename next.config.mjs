@@ -20,9 +20,10 @@ const nextConfig = {
     ],
   },
   async headers() {
+    const isDev = process.env.NODE_ENV !== "production";
     const contentSecurityPolicy = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' https://accounts.google.com",
+      `script-src 'self' 'unsafe-inline' ${isDev ? "'unsafe-eval'" : ""} https://accounts.google.com`,
       "style-src 'self' 'unsafe-inline' https://accounts.google.com",
       "img-src 'self' data: blob: https://images.unsplash.com https://pub-72533f33b103419dbe1a3311b5cb6de6.r2.dev https://images.techlo.store https://lh3.googleusercontent.com",
       "font-src 'self' data:",
