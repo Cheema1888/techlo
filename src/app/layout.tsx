@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/lib/themeContext";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { AuthModal } from "@/components/auth/AuthModal";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   title: "TECHLO | Pakistan's Student Hardware Marketplace & Prototyping Hub",
@@ -55,6 +56,7 @@ export default function RootLayout({
             <AuthModal />
           </AuthProvider>
         </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );
